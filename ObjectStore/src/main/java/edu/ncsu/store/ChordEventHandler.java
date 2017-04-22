@@ -19,12 +19,15 @@ public class ChordEventHandler implements UpcallEventHandler {
   private final transient static Logger logger = Logger.getLogger(ChordEventHandler.class);
 
   public void moveKeystoNewPredecessor(ChordID<InetAddress> prevPredecessor,
-				       ChordID<InetAddress> newPredecessor) {
+                                       ChordID<InetAddress> newPredecessor) {
     logger.info("Handler called in " + ObjectStoreService.getChordSession().getChordNodeID()
-		+ " New predecessor is: " + newPredecessor);
+                + " New predecessor is: " + newPredecessor);
 
-      /* Go through all keys of localStorage and see if we have any keys that needs to be
-      moved to this new predecessor.*/
+      /* We can come to this method via two ways. Either our predecessor failed or we got a new
+       predecessor in between
+      Go through all keys of localStorage and see if we have any keys that needs to be
+      moved to this new predecessor (in case we got here because new predecessor joined) OR
+       find all keys for which we are now responsible and replicate those keys (in case predecessor failed) */
     ObjectStore store = ObjectStoreService.getStore();
     try {
     List<KeyMetadata> allKeys = store.keySet();
@@ -176,7 +179,10 @@ public class ChordEventHandler implements UpcallEventHandler {
         break;
       }
       case PREDECESSOR_FAILED: {
-        replicateKeysofFailedPredecessor(prevValue, newValue);
+        /* predecessor failure is also handled when current predecessor is updated i.e in
+        NEW_PREDECESSOR event.
+         */
+        //replicateKeysofFailedPredecessor(prevValue, newValue);
         break;
       }
       case SUCCESSOR_FAILED: {
