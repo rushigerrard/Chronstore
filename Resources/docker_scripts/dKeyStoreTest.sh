@@ -6,4 +6,4 @@ set -x
 sudo python ~/DockerImage/keyvalue/Resources/docker_scripts/FetchIPAddress.py
 
 # run maven tests
-sudo docker run -v ~/DockerImage/keyvalue:/root/KeyValueStore/ keyvalue bash -c "cd /root/KeyValueStore/Chord;mvn install;cd /root/KeyValueStore/ObjectStore; mvn install;cd /root/KeyValueStore/Client;mvn compile exec:java -Dexec.args=\"$1 $2\""
+sudo docker run -v ~/DockerImage/keyvalue/Resources/tests/:/root/KeyValueStore/Resources/tests/ keyvalue bash -c "cd /root/KeyValueStore/Client;mvn exec:java -Dexec.args=\"$1 $2\""
