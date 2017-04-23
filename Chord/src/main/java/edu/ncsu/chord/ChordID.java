@@ -15,7 +15,7 @@ public class ChordID<T> extends SHA256Hash implements Serializable {
   T key = null;
 
   /* Depending on CHORD_ID_MAX_BITS in each ChordID will be calculated. This is also used in finger table */
-  public static final int MAX_BITS = ChordConfig.CHORD_ID_MAX_BITS;
+  private static final int MAX_BITS = ChordConfig.CHORD_ID_MAX_BITS;
 
   /* Keep all loggers transient so that they are not passed over RMI call */
   private final transient static Logger logger = Logger.getLogger(ChordID.class);
