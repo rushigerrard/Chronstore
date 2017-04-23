@@ -10,7 +10,7 @@ import java.util.ArrayList;
 class ChordConfig {
 
   /* Depending on CHORD_ID_MAX_BITS in each ChordID will be calculated. This is also used in finger table */
-  static int CHORD_ID_MAX_BITS = 10;
+  static int CHORD_ID_MAX_BITS = 16;
 
   /* Number of maximum entries to keep in successor list */
   static int SUCCESSOR_LIST_MAX_SIZE = 3;
