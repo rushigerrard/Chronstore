@@ -82,6 +82,8 @@ public class Client {
   }
 
   public void getKeys() {
+    boolean result = true;
+    int failureCount = 0;
     StoreClientAPI handle = ClientRMIUtils.getRemoteClient();
     Double average_time = 0D;
     try {
@@ -91,6 +93,8 @@ public class Client {
         long after_time = System.currentTimeMillis();
         if (retrievedValue == null || !retrievedValue.equals(e.getValue())) {
           logger.error("Value for Key: " + e.getKey() + " Could not be found.");
+          result = false;
+          failureCount++;
         }
         //logger.debug("Time Taken to get key : " + (after_time - before_time));
         average_time += after_time - before_time;
@@ -100,6 +104,11 @@ public class Client {
     }
     logger.info("Average Time Taken to get key : " + (average_time / keyValueMap.size()) + " ms For "
                 + keyValueMap.size() + " keys");
+    if (result) {
+      System.out.println("Successfully retrieved all keys!");
+    } else {
+      System.out.println("Error - Count not get " + failureCount + " Keys");
+    }
     System.out.println("Average Time Taken to get key : " + (average_time / keyValueMap.size()) + " ms For "
                        + keyValueMap.size() + " keys");
   }
