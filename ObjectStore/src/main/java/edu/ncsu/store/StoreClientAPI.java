@@ -4,6 +4,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -17,5 +18,6 @@ public interface StoreClientAPI extends Remote {
 
   void delete(String key) throws RemoteException;
 
-  HashMap<String, DataContainer> dumpStore() throws RemoteException;
+  List<KeyMetadata> keySet() throws RemoteException;
+//  HashMap<String, DataContainer> dumpStore() throws RemoteException;
 }

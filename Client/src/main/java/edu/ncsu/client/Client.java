@@ -5,11 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.net.InetAddress;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
+import edu.ncsu.store.KeyMetadata;
 import org.apache.log4j.Logger;
 
 import edu.ncsu.chord.ChordID;
@@ -31,7 +29,7 @@ public class Client {
 
   HashMap<String, String> keyValueMap;
   ArrayList<ChordID<InetAddress>> ipList;
-  HashMap<ChordID<InetAddress>, HashMap<String, DataContainer>> nodeDataMap;
+  HashMap<ChordID<InetAddress>, List<KeyMetadata>> nodeDataMap;
 
   public Client(int nKeys) {
     keyValueMap = new HashMap<>();
@@ -117,19 +115,15 @@ public class Client {
 
   private boolean verifyKeyLocation(ChordID<String> chordKey) {
     ChordID<InetAddress> responsibleNode = null;
+    KeyMetadata serachKey = new KeyMetadata(chordKey);
     boolean result = true;
     for (int i = 1; i <= StoreConfig.REPLICATION_COUNT; i++) {
       responsibleNode = getResponsibleNode(chordKey, i);
-      if (!nodeDataMap.get(responsibleNode).containsKey(chordKey.getKey())) {
+      serachKey.setReplicaNumber(i);
+      int index = nodeDataMap.get(responsibleNode).indexOf(serachKey);
+      if (index == -1) {
         logger.error("Key: " + chordKey  + " (Replica: "+ i + ")  Not found on " + responsibleNode);
         result = false;
-      } else {
-        DataContainer c = nodeDataMap.get(responsibleNode).get(chordKey.getKey());
-        if (c.replicaNumber != i) {
-          logger.error("Key: " + chordKey  + " Replica should be: "+ i + " found: " +
-                       c.replicaNumber + " on node " + responsibleNode);
-          result = false;
-        }
       }
     }
     return result;
@@ -141,9 +135,9 @@ public class Client {
     for (ChordID<InetAddress> nodeID : ipList) {
       StoreClientAPI handle = ClientRMIUtils.getRemoteClient(nodeID.getKey());
       try {
-        HashMap<String, DataContainer> nodeStoreDump = handle.dumpStore();
-        nodeDataMap.put(nodeID, nodeStoreDump);
-        System.out.println("Node: " + nodeID + " has " + nodeStoreDump.size() + " keys.");
+        List<KeyMetadata> allKeys = handle.keySet();
+        nodeDataMap.put(nodeID, allKeys);
+        System.out.println("Node: " + nodeID + " has " + allKeys.size() + " keys.");
       } catch (Exception e) {
         e.printStackTrace();
       }

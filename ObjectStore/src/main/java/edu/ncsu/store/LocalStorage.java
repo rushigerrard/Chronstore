@@ -1,6 +1,7 @@
 package edu.ncsu.store;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 
@@ -8,16 +9,25 @@ import java.util.Set;
 /**
  * Created by amit on 1/4/17.
  */
-interface LocalStorage {
-  DataContainer get(String key);
+public interface LocalStorage {
+
+  byte[] get(String key);
+
+  byte[] get(String key, Long timestamp);
+
+  List<byte[]> get(String key, Long fromTime, Long toTime);
 
   boolean containsKey(String key);
 
-  void put(String key, DataContainer value) throws Exception;
+  KeyMetadata getMetadata(String key);
 
-  void delete(String key);
+  boolean put(KeyMetadata km, byte[] value) throws Exception;
 
-  HashMap<String, DataContainer> dumpStorage();
+  boolean delete(String key);
 
-  int size();
+  List<KeyMetadata> keySet();
+
+//  HashMap<String, DataContainer> dumpStorage();
+
+//  int size();
 }

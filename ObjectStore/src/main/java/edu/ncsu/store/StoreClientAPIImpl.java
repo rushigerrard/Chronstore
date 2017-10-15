@@ -9,10 +9,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
 import edu.ncsu.chord.ChordID;
 import edu.ncsu.chord.ChordSession;
 
@@ -47,12 +45,11 @@ public class StoreClientAPIImpl implements StoreClientAPI {
     ObjectStoreOperations responsibleStore = StoreRMIUtils.getRemoteObjectStore(responsibleNodeID.getKey());
     Object value = null;
     try {
-      DataContainer containerValue = responsibleStore.getObject(chordKey);
-      if (containerValue == null) {
-	logger.error("Key " + key + " not found on " + session.getChordNodeID());
+      byte[] val = responsibleStore.getObject(chordKey);
+      if (val == null) {
+        logger.error("Key " + key + " not found on " + session.getChordNodeID());
       } else {
-        byte[] val = containerValue.value;
-	value = deserialize(val);
+        value = deserialize(val);
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -69,10 +66,7 @@ public class StoreClientAPIImpl implements StoreClientAPI {
 
     /* Serialize the value */
     try {
-      final int REPLICA_NUMBER = 1;
-      Map<ChordID<String>, DataContainer> data = new HashMap<>();
-      data.put(chordKey, new DataContainer(serialize(value), REPLICA_NUMBER));
-      responsibleStore.putObjects(data);
+      responsibleStore.putObject(chordKey, serialize(value));
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -84,8 +78,13 @@ public class StoreClientAPIImpl implements StoreClientAPI {
   }
 
   @Override
-  public HashMap<String, DataContainer> dumpStore() throws RemoteException {
-    return ObjectStoreService.getStore().dumpStore();
+  public List<KeyMetadata> keySet() throws RemoteException {
+    return ObjectStoreService.getStore().keySet();
   }
+
+//  @Override
+//  public HashMap<String, DataContainer> dumpStore() throws RemoteException {
+//    return ObjectStoreService.getStore().dumpStore();
+//  }
 
 }
