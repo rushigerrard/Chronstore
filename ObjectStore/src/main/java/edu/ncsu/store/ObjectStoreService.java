@@ -54,6 +54,7 @@ class ObjectStoreService {
     /* Initialize RMI */
     initRMI();
 
+    System.out.println("RMI initialization done..");
     /* Create object store object and export it for RMI */
     store = new ObjectStore();
     StoreRMIUtils.exportStoreObjectRMI(store);
@@ -61,10 +62,13 @@ class ObjectStoreService {
     /* Creation objectStore before starting chord is very important
     otherwise chord upcalls with start getting NullPointerExceptions.
      */
+    System.out.println("Starting chord session..");
     /* First start chord node and join network */
     chordSession = ChordDriver.getSession();
     chordSession.registerUpcall(new ChordEventHandler());
+    System.out.println("chord upcall registerd");
     chordSession.join();
+    System.out.println("chord network join done..");
 
 
     /* create client API object and export it for RMI */

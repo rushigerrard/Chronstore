@@ -4,6 +4,8 @@ import edu.ncsu.store.DataContainer;
 import edu.ncsu.store.KeyMetadata;
 import edu.ncsu.store.LocalStorage;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -54,7 +56,7 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public List<KeyMetadata> keySet() {
-        return null;
+        return Collections.emptyList();
     }
 
 //    @Override
