@@ -26,6 +26,7 @@ public class ChordEventHandler implements UpcallEventHandler {
       /* Go through all keys of localStorage and see if we have any keys that needs to be
       moved to this new predecessor.*/
     ObjectStore store = ObjectStoreService.getStore();
+    try {
     List<KeyMetadata> allKeys = store.keySet();
     Map<KeyMetadata, byte[]> misplacedObjects = new HashMap();
     for (KeyMetadata km : allKeys) {
@@ -33,13 +34,11 @@ public class ChordEventHandler implements UpcallEventHandler {
           km.key.inRange(prevPredecessor, newPredecessor, false, true)) {
         // This key ID is either a replica or belongs to new predecessor
         // This key needs to be moved to new predecessor.
-        try {
+
           misplacedObjects.put(km, store.getObject(km.key));
-        } catch (RemoteException e) {
-          e.printStackTrace();
-        }
       }
     }
+
     logger.info("Number of keys that needs to moved: " + misplacedObjects.size());
     // TODO: remove below log statement after debugging is done
     logger.info("About to move below keys: " + new ArrayList<>(misplacedObjects.keySet()));
@@ -47,7 +46,6 @@ public class ChordEventHandler implements UpcallEventHandler {
     ObjectStoreOperations
 	predecessorStore =
 	StoreRMIUtils.getRemoteObjectStore(newPredecessor.getKey());
-    try {
       predecessorStore.putObjects(misplacedObjects);
       // If above operation did not throw an exception
       // only then delete those keys from your storage
@@ -71,6 +69,7 @@ public class ChordEventHandler implements UpcallEventHandler {
       return;
     }
 
+    try {
     List<KeyMetadata> allKeys = store.keySet();
     Map<KeyMetadata, byte[]> replicableKeys = new HashMap();
     for (KeyMetadata km : allKeys) {
@@ -78,11 +77,7 @@ public class ChordEventHandler implements UpcallEventHandler {
         // This key ID needs be further replicated
         KeyMetadata newKm = new KeyMetadata(km.key);
         newKm.setReplicaNumber(km.replicaNumber + 1);
-        try {
           replicableKeys.put(newKm, store.getObject(km.key));
-        } catch (RemoteException e) {
-          e.printStackTrace();
-        }
       }
     }
     logger.info("Number of keys that can be replicated: " + replicableKeys.size());
@@ -92,7 +87,7 @@ public class ChordEventHandler implements UpcallEventHandler {
     ObjectStoreOperations
         successorStore =
         StoreRMIUtils.getRemoteObjectStore(newSuccessor.getKey());
-    try {
+
       successorStore.makeReplicas(replicableKeys);
     } catch (Exception e) {
       e.printStackTrace();
@@ -124,6 +119,7 @@ public class ChordEventHandler implements UpcallEventHandler {
     /* Go through all keys of localStorage and see if we have any keys that needs to bb
       further replicated.*/
     ObjectStore store = ObjectStoreService.getStore();
+    try {
     List<KeyMetadata> allKeys = store.keySet();
     Map<KeyMetadata, byte[]> replicableKeys = new HashMap();
     for (KeyMetadata km : allKeys) {
@@ -134,11 +130,9 @@ public class ChordEventHandler implements UpcallEventHandler {
         // Create new keyMetadata for replication
         KeyMetadata newKm = new KeyMetadata(km.key);
         newKm.setReplicaNumber(km.replicaNumber + 1);
-        try {
+
           replicableKeys.put(newKm, store.getObject(km.key));
-        } catch (RemoteException e) {
-          e.printStackTrace();
-        }
+
       }
     }
     logger.info("Number of keys that can be replicated: " + replicableKeys.size());
@@ -147,7 +141,7 @@ public class ChordEventHandler implements UpcallEventHandler {
     // Start key movement. First get remote object for predecessor object store
     ObjectStoreOperations successorStore =
         StoreRMIUtils.getRemoteObjectStore(ObjectStoreService.getChordSession().getSelfSuccessor().getKey());
-    try {
+
       successorStore.makeReplicas(replicableKeys);
     } catch (Exception e) {
       e.printStackTrace();
