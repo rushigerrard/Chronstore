@@ -36,6 +36,7 @@ class StoreRMIUtils {
   }
 
   static boolean exportStoreObjectRMI(ObjectStore store) {
+    System.out.println("Exporting object store RMI..");
     Registry registry = getRegistry();
     try {
       ObjectStoreOperations storeOps = (ObjectStoreOperations) UnicastRemoteObject.exportObject(store, 0);
