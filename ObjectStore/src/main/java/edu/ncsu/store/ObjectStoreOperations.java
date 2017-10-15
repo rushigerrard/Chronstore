@@ -33,5 +33,5 @@ public interface ObjectStoreOperations extends Remote {
 
   boolean removeReplica(ChordID<String> key) throws RemoteException;
 
-  List<KeyMetadata> keySet();
+  List<KeyMetadata> keySet() throws RemoteException;
 }

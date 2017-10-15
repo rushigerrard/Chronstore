@@ -6,3 +6,5 @@ Steps to run the Ansible Script:
 
 ####To run docker image on remote
 `docker run -v ~/DockerImage/keyvalue/:/root/KeyValueStore/ keyvalue &`
+d5b4a6611363172dce6dee49cf9db293cfac6fde
+ansible-playbook main.yml --private-key=~/.ssh/id_rsa -uaabarve --extra-vars="UNITY_ID=aabarve GIT_TOKEN=d5b4a6611363172dce6dee49cf9db293cfac6fde IP_ADDR=152.7.99.153 GIT_BRANCH=master

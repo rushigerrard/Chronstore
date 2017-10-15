@@ -4,6 +4,11 @@
     path: "{{home_path}}/DockerImage" 
     state: directory
 
+- name: Creating Log server directory
+  file:
+    path: "{{home_path}}/log_server"
+    state: directory
+
 - name: Add Env variable for shell scripts
   lineinfile:
     dest: "{{home_path}}/.bashrc"

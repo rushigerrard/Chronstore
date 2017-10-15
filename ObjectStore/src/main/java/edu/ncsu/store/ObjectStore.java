@@ -133,7 +133,7 @@ class ObjectStore implements ObjectStoreOperations {
   }
 
   @Override
-  public List<KeyMetadata> keySet() {
+  public List<KeyMetadata> keySet() throws RemoteException {
     return localStorage.keySet();
   }
 
