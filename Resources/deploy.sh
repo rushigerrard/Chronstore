@@ -79,6 +79,9 @@ sudo docker build -t chronstore .
 # Run the container - this should go in drun
 # sudo docker run -v ~/chronstore:/root/chronstore chronstore
 
+# Setup machine to accept packets from docker 
+iptables -A INPUT -i docker0 -j ACCEPT
+
 exit
 EOF
 
