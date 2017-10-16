@@ -80,7 +80,7 @@ sudo docker build -t chronstore .
 # sudo docker run -v ~/chronstore:/root/chronstore chronstore
 
 exit
-'EOF'
+EOF
 
 
 
