@@ -60,6 +60,11 @@ java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4712 log4j.Cho
 java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4713 log4j.KeyStore.properties &
 java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4714 log4j.Analysis.properties &
 
+# Change the hostname in log4j.properties files 
+sed -i.bak s/loghost/${IP}/g chronstore/Chord/src/main/resources/log4j.properties
+sed -i.bak s/loghost/${IP}/g chronstore/ObjectStore/src/main/resources/log4j.properties
+sed -i.bak s/loghost/${IP}/g chronstore/Client/src/main/resources/log4j.properties
+
 cd ..
 
 # get Dockerfile
@@ -69,7 +74,7 @@ cp chronstore/Resources/Dockerfile .
 sudo docker build -t chronstore .
 
 # Run the container - this should go in drun
-sudo docker run -v ~/chronstore:/root/chronstore chronstore
+# sudo docker run -v ~/chronstore:/root/chronstore chronstore
 
 
 EOF
