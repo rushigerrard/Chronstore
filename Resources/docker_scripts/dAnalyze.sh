@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python ~/DockerImage/keyvalue/Resources/docker_scripts/logAnalyzer.py $1 $2
+python ~/chronstore/Resources/docker_scripts/logAnalyzer.py $1 $2
