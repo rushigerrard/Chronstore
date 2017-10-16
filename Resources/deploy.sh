@@ -80,9 +80,8 @@ sudo docker build -t chronstore .
 # sudo docker run -v ~/chronstore:/root/chronstore chronstore
 
 # Setup machine to accept packets from docker 
-iptables -A INPUT -i docker0 -j ACCEPT
+sudo iptables -A INPUT -i docker0 -j ACCEPT
 
-exit
 EOF
 
 
