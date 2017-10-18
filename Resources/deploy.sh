@@ -75,13 +75,13 @@ sudo apt-get install -y maven git emacs24 \
 # get Dockerfile
 cp chronstore/Resources/Dockerfile .
 
+# Setup machine to accept packets from docker 
+sudo iptables -A INPUT -i docker0 -j ACCEPT
+
 # Build the image
 sudo docker build -t chronstore .
 
 echo "Done building image.."
-
-# Setup machine to accept packets from docker 
-sudo iptables -A INPUT -i docker0 -j ACCEPT
 
 # Run the container - this should go in drun
 # sudo docker run -v ~/chronstore:/root/chronstore chronstore
