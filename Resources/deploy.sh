@@ -71,6 +71,7 @@ sudo apt-get install -y maven git emacs24 \
      python-pip \
      python-dev \
      build-essential 
+sudo pip install docker
 
 # get Dockerfile
 cp chronstore/Resources/Dockerfile .

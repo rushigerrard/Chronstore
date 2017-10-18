@@ -14,7 +14,7 @@ node_list = []
 begin_time = ""
 end_time = ""
 total_num_of_nodes = 0
-log_file_path = home + "logs/analysis.log"
+log_file_path = home + "/logs/analysis.log"
 current_ip_list = []
 
 
