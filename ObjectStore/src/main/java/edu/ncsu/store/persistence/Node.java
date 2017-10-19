@@ -11,7 +11,7 @@ public class Node<K extends Comparable<K>, T> implements Serializable {
     /**
      * Todo : liveNode pointing to latest node
      */
-    protected LeafNode liveNode;
+    protected LeafNode<K, T> liveNode;
 
     public boolean isOverflowed() {
         return keys.size() > 2 * BPlusTree.D;

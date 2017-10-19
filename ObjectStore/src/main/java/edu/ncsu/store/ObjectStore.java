@@ -25,7 +25,11 @@ class ObjectStore implements ObjectStoreOperations {
   private final transient static Logger logger = Logger.getLogger(ObjectStore.class);
 
   public ObjectStore() {
-    localStorage = new ImmutableStore();
+    try {
+      localStorage = new ImmutableStore();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
 

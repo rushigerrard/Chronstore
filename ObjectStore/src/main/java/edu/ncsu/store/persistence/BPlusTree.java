@@ -23,9 +23,9 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
      * @param endTime
      * @return
      */
-    public List<T> get(K startTime, K endTime) {
+    public List<Pair<T, T>> get(K startTime, K endTime) {
 
-        List<T> finalList = new LinkedList<>();
+        List<Pair<T,T>> finalList = new LinkedList<>();
         LeafNode<K, T> endLeaf = (LeafNode<K, T>) treeSearch(root, endTime);
 
         // traverse from endTime to startTime (reverse introduces edge-cases
@@ -42,7 +42,7 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
                 // if timestamp in leafnode is less than or equal to endtime, add associated value to the finalList
                 if (keys.get(i).compareTo(endTime) <= 0 &&
                         keys.get(i).compareTo(startTime) >= 0) {
-                    finalList.add(0, values.get(i));
+                    finalList.add(0, new Pair<>(values.get(i), getPrevious(endLeaf, i)));
                 }
                 currentTime = keys.get(i);
             }
@@ -161,9 +161,10 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
      *
      * @return value
      */
-    public T get() {
+    public Pair<T, T> get() {
         if (root != null && root.liveNode != null && root.liveNode.valueOffsets.size() != 0)
-            return (T) root.liveNode.valueOffsets.get(root.liveNode.valueOffsets.size() - 1);
+            return new Pair<>(root.liveNode.getLastValue(),
+                    getPrevious(root.liveNode, root.liveNode.valueOffsets.size() - 1));
         return null;
     }
 

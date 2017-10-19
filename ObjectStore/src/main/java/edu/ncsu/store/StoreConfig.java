@@ -13,4 +13,10 @@ public class StoreConfig {
 
   /* RMI Call timeout - Seconds to wait before call is considered as failed */
   static int RMI_TIMEOUT = 1;
+
+  /* metadata directory paths - this directory will store indexes and metadata */
+  public final static String META_DIR = "/tmp/indexes/";
+
+  /* Data directory path - this directory will store actual data */
+  public final static String DATA_DIR = "/tmp/data/";
 }

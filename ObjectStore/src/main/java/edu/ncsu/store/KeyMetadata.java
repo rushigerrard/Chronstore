@@ -2,12 +2,14 @@ package edu.ncsu.store;
 
 import edu.ncsu.chord.ChordID;
 
+import java.io.Serializable;
+
 /**
  * Holds the key and metadata about that key in database. Currently, we use this
  * mostly to hold the replica number of this key. However, other values can also be
  * added into this object. This object will be stored along with every key.
  */
-public class KeyMetadata {
+public class KeyMetadata implements Serializable {
     ChordID<String> key; // the key whose metadata this is
     int replicaNumber; // replica number of this key
 

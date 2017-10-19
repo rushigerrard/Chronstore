@@ -1,6 +1,8 @@
 package edu.ncsu.store.utils;
 
-public class Pair<K, V> {
+import java.io.Serializable;
+
+public class Pair<K, V> implements Serializable {
     private K key;
     private V value;
 
@@ -37,5 +39,12 @@ public class Pair<K, V> {
         return key.equals(((Pair)obj).getKey())  &&
                 value.equals(((Pair) obj).getValue());
     }
+
+    public String toString() {
+        return "(" + key.toString() + ", " + value.toString() + ")";
+    }
+
 }
+
+
 

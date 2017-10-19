@@ -51,9 +51,9 @@ java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4714 log4j.Ana
 cd ..
 
 # Change the hostname in log4j.properties files 
-sed -i.bak s/loghost/${IP}/g chronstore/Chord/src/main/resources/log4j.properties
-sed -i.bak s/loghost/${IP}/g chronstore/ObjectStore/src/main/resources/log4j.properties
-sed -i.bak s/loghost/${IP}/g chronstore/Client/src/main/resources/log4j.properties
+sed -i.bak s/localhost/${IP}/g chronstore/Chord/src/main/resources/log4j.properties
+sed -i.bak s/localhost/${IP}/g chronstore/ObjectStore/src/main/resources/log4j.properties
+sed -i.bak s/localhost/${IP}/g chronstore/Client/src/main/resources/log4j.properties
 
 
 # STEP: install docker
