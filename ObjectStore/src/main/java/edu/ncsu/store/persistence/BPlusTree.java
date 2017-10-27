@@ -134,11 +134,11 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
     /**
      * The get(int k) method returns a list of the last k valueOffsets associated with
      * a key.
-     *
+     * NOT implemented properly! DON'T use.
      * @param k
      * @return
      */
-    public List<T> get(int k) {
+    private List<T> get(int k) {
 
         List<T> finalList = new ArrayList<>();
         LeafNode<K, T> newLeaf = root.liveNode;

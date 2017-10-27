@@ -305,6 +305,24 @@ be the offset of the actual storage location of  that value. */
         return buf;
     }
 
+    /**
+     * Checks the returned pair for corner cases. If pair is null then
+     * sets both starting and ending point to 0 (so that nothing is read)
+     * If pair.getValue() == null then sets the pair.value = 0. Having a
+     * value as null means there is no previous element. Which means read should
+     * start at offset 0.
+     * Having a non-null value but null key is an Error.
+     * @param p
+     * @return
+     */
+    private Pair<Integer, Integer> errorCheck(Pair<Integer, Integer> p) {
+        if (p == null)
+            p = new Pair<>(0, 0);
+        else if (p.getValue() == null)
+            p.setValue(0);
+        return p;
+    }
+
     @Override
     public byte[] get(String key, Long timestamp) {
         BPlusTree<Long, Integer> indexTree;
@@ -312,8 +330,7 @@ be the offset of the actual storage location of  that value. */
         String indexFilePath = indexFileFor(key).getPath();
         indexTree = readIndexes(indexFilePath);
         Pair<Integer, Integer> p = indexTree.get(timestamp);
-        if (p == null)
-            return null;
+        p = errorCheck(p);
         // returned pair object has key as the offset at timestamp and value
         // as the offset before timestamp.
         return readBetween(dataFilePath, p);
@@ -327,10 +344,7 @@ be the offset of the actual storage location of  that value. */
         String indexFilePath = indexFileFor(key).getPath();
         indexTree = readIndexes(indexFilePath);
         Pair<Integer, Integer> p = indexTree.get();
-        // if key is not found then p == null, then set p to
-        // a pair with start and end point as 0. So nothing will be read.
-        if (p == null)
-            return null;
+        p = errorCheck(p);
         // returned pair object has key as the offset at timestamp and value
         // as the offset before timestamp.
         return readBetween(dataFilePath, p);
@@ -344,18 +358,12 @@ be the offset of the actual storage location of  that value. */
         indexTree = readIndexes(indexFilePath);
         List<Pair<Integer, Integer>> pList = indexTree.get(fromTime, toTime);
         List<byte[]> result = new ArrayList<>();
-        // If no key was found within this time interval then this will be null
-        if (pList != null) {
-            for (Pair<Integer, Integer> p : pList) {
-                // For the very first value, the previous offest can be null
-                // which means 0 in our case. Convert that null to zero.
-                if (p.getValue() == null) {
-                    p.setValue(0);
-                }
-                System.out.println("Reading between " + p.getValue() + " and " + p.getKey());
-                result.add(readBetween(dataFilePath, p));
+        // If no key was found within this time interval then this list will be empty
+        for (Pair<Integer, Integer> p : pList) {
+            errorCheck(p);
+            System.out.println("Reading between " + p.getValue() + " and " + p.getKey());
+            result.add(readBetween(dataFilePath, p));
 
-            }
         }
         return result;
     }

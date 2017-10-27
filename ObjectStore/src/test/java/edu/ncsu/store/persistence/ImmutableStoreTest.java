@@ -89,7 +89,7 @@ public class ImmutableStoreTest {
     }
 
     @Test
-    public void put() throws Exception {
+    public void putMultiple() throws Exception {
         Long before = System.currentTimeMillis();
         String key = "testkey";
         KeyMetadata km = new KeyMetadata(new ChordID<>(key));
@@ -109,6 +109,18 @@ public class ImmutableStoreTest {
         Assert.assertTrue(Arrays.equals(values.get(1), "".getBytes()));
         Assert.assertTrue(Arrays.equals(values.get(2), "stringdata".getBytes()));
 
+    }
+
+    @Test
+    public void putSingle() throws Exception {
+        String key = "testkey";
+        String data = "testdata";
+        KeyMetadata km = new KeyMetadata(new ChordID<>(key));
+        store.put(km, data.getBytes());
+        Thread.sleep(100);
+        byte[] retVal = store.get(key);
+        System.out.println("received: ["+new String(retVal)+"]");
+        Assert.assertEquals("get value doesn't match with put value", data, new String(retVal));
     }
 //
 //    @Test
