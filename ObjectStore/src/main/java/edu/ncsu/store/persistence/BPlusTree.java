@@ -1,6 +1,8 @@
 package edu.ncsu.store.persistence;
 
 import edu.ncsu.store.utils.Pair;
+import org.apache.log4j.Logger;
+
 import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
@@ -11,6 +13,10 @@ import java.util.Map.Entry;
  * TODO: Rename to BPlusTree
  */
 public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
+
+    /* Keep all loggers transient so that they are not passed over RMI call */
+    private final transient static Logger logger = Logger.getLogger(BPlusTree.class);
+
 
     public Node<K,T> root;
     public static final int D = 16;

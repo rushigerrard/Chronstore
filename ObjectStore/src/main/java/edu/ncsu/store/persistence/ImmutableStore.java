@@ -4,28 +4,24 @@ import edu.ncsu.store.KeyMetadata;
 import edu.ncsu.store.LocalStorage;
 import edu.ncsu.store.StoreConfig;
 import edu.ncsu.store.utils.Pair;
+import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class ImmutableStore implements LocalStorage {
-    //TODO: add unit & functional tests
+
+    /* Keep all loggers transient so that they are not passed over RMI call */
+    private final transient static Logger logger = Logger.getLogger(ImmutableStore.class);
 
     /* Directory path where all index files and data files are stored */
     private String metaDirPath = StoreConfig.META_DIR;
     private String dataDirPath = StoreConfig.DATA_DIR;
 
-    /* This string is used to represent a deleted value */
-    private static final byte[] NULLDATA = "null".getBytes();
-
     File indexDir = new File(metaDirPath);
     File dataDir = new File(dataDirPath);
     File metadataFile = new File(metaDirPath + "metadata");
-
-    // HashMap<String, byte[]> data;
 
     public ImmutableStore() throws Exception {
         // Create the data directories if they don't exist
@@ -45,7 +41,6 @@ public class ImmutableStore implements LocalStorage {
             throw new Exception("Data directories can not be created");
         }
     }
-
 
     /* helper methods */
     private File indexFileFor(String key) {
@@ -72,7 +67,7 @@ public class ImmutableStore implements LocalStorage {
             /* Data file can not exist without a index file
              If index file is not found it means data file also
              has to be created. */
-                System.out.println("New data files created for " + key);
+                logger.debug("New data files created for " + key);
                 indexFile.createNewFile();
                 dataFile.createNewFile();
             } catch (IOException e) {
@@ -183,7 +178,7 @@ public class ImmutableStore implements LocalStorage {
         byte buf[] = new byte[(int) indexFile.length()];
         int rlen = read(buf, filePath, 0, (int) indexFile.length());
         if (rlen == -1) {
-            System.out.println("Error while reading index file");
+            logger.debug("Error while reading index file");
             return null;
         }
         return (BPlusTree<Long, Integer>) deserialize(buf, BPlusTree.class);
@@ -246,7 +241,7 @@ be the offset of the actual storage location of  that value. */
         BPlusTree<Long, Integer> indexTree;
         File dataFile = dataFilefor(key);
         File indexFile = indexFileFor(key);
-        System.out.println("Data file " + dataFile.getPath() + " index file " + indexFile.getPath());
+        logger.debug("Data file " + dataFile.getPath() + " index file " + indexFile.getPath());
         // we have to read index from file, but if this is the first
         // time inserting this key then we will have to create corresponding
         // files
@@ -264,7 +259,7 @@ be the offset of the actual storage location of  that value. */
         if (value != null) {
             wlen = write(value, dataFile.getPath(), true);
             if (wlen == -1) {
-                System.out.println("Unable to write data");
+                logger.debug("Unable to write data");
                 return false;
             }
         }
@@ -278,28 +273,28 @@ be the offset of the actual storage location of  that value. */
         if (prevOffsetPair == null) {
             prevOffset = 0;
         } else {
-            prevOffset = prevOffsetPair.getKey();
+            prevOffset = prevOffsetPair.getFirst();
         }
         int offset = prevOffset + wlen;
-        System.out.println("Written new value between " + prevOffset + " - " + offset);
+        logger.debug("Written new value between " + prevOffset + " - " + offset);
         indexTree.insert(System.currentTimeMillis(), offset);
 
         // write back the index tree
         wlen = write(serialize(indexTree), indexFile.getPath(), false);
         if (wlen == -1) {
-            System.out.println("Error while writing index tree");
+            logger.debug("Error while writing index tree");
             return false;
         }
         return true;
     }
 
     private byte[] readBetween(String filePath, Pair<Integer, Integer> startEndPair) {
-        int length = startEndPair.getKey() - startEndPair.getValue() ;
+        int length = startEndPair.getFirst() - startEndPair.getSecond() ;
         byte[] buf = new byte[length];
-        int rlen = read(buf, filePath, startEndPair.getValue(), length);
+        int rlen = read(buf, filePath, startEndPair.getSecond(), length);
         if (rlen == -1) {
             //TODO add logger
-            System.out.println("Error while reading from datafile");
+            logger.debug("Error while reading from datafile");
             return null;
         }
         return buf;
@@ -308,7 +303,7 @@ be the offset of the actual storage location of  that value. */
     /**
      * Checks the returned pair for corner cases. If pair is null then
      * sets both starting and ending point to 0 (so that nothing is read)
-     * If pair.getValue() == null then sets the pair.value = 0. Having a
+     * If pair.getSecond() == null then sets the pair.value = 0. Having a
      * value as null means there is no previous element. Which means read should
      * start at offset 0.
      * Having a non-null value but null key is an Error.
@@ -318,8 +313,8 @@ be the offset of the actual storage location of  that value. */
     private Pair<Integer, Integer> errorCheck(Pair<Integer, Integer> p) {
         if (p == null)
             p = new Pair<>(0, 0);
-        else if (p.getValue() == null)
-            p.setValue(0);
+        else if (p.getSecond() == null)
+            p.setSecond(0);
         return p;
     }
 
@@ -361,7 +356,7 @@ be the offset of the actual storage location of  that value. */
         // If no key was found within this time interval then this list will be empty
         for (Pair<Integer, Integer> p : pList) {
             errorCheck(p);
-            System.out.println("Reading between " + p.getValue() + " and " + p.getKey());
+            logger.debug("Reading between " + p.getSecond() + " and " + p.getFirst());
             result.add(readBetween(dataFilePath, p));
 
         }

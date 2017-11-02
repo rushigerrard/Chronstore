@@ -2,46 +2,46 @@ package edu.ncsu.store.utils;
 
 import java.io.Serializable;
 
-public class Pair<K, V> implements Serializable {
-    private K key;
-    private V value;
+public class Pair<T1, T2> implements Serializable {
+    private T1 first;
+    private T2 second;
 
-    public Pair(K k, V v) {
-        key = k;
-        value = v;
+    public Pair(T1 t1, T2 t2) {
+        first = t1;
+        second = t2;
     }
 
-    public K getKey() {
-        return key;
+    public T1 getFirst() {
+        return first;
     }
 
-    public V getValue() {
-        return value;
+    public T2 getSecond() {
+        return second;
     }
 
-    public void setKey(K key) {
-        this.key = key;
+    public void setFirst(T1 first) {
+        this.first = first;
     }
 
-    public void setValue(V value) {
-        this.value = value;
+    public void setSecond(T2 second) {
+        this.second = second;
     }
 
     @Override
     public int hashCode() {
-        return key.hashCode() * 17 + value.hashCode();
+        return first.hashCode() * 17 + second.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == null || !(obj instanceof Pair))
             return false;
-        return key.equals(((Pair)obj).getKey())  &&
-                value.equals(((Pair) obj).getValue());
+        return first.equals(((Pair)obj).getFirst())  &&
+                second.equals(((Pair) obj).getSecond());
     }
 
     public String toString() {
-        return "(" + key.toString() + ", " + value.toString() + ")";
+        return "(" + first.toString() + ", " + second.toString() + ")";
     }
 
 }

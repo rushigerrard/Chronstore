@@ -139,8 +139,18 @@ public class ImmutableStoreTest {
 //    public void delete() throws Exception {
 //    }
 //
-//    @Test
-//    public void keySet() throws Exception {
-//    }
+    @Test
+    public void keySet() throws Exception {
+        List<KeyMetadata> expectedList = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            String key = "testkey" + i;
+            KeyMetadata km = new KeyMetadata(new ChordID<>(key));
+            km.setReplicaNumber(i);
+            store.put(km, "testdata".getBytes());
+            expectedList.add(km);
+        }
+        List<KeyMetadata> actualList = store.keySet();
+        Assert.assertTrue("Key and its metadata should match", expectedList.equals(actualList));
+    }
 
 }

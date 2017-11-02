@@ -80,14 +80,6 @@ class ObjectStore implements ObjectStoreOperations {
   public boolean putObjects(Map<KeyMetadata, byte[]> keyValueMap) throws RemoteException {
     boolean result = true;
     makeReplicas(keyValueMap);
-//    for (Map.Entry<ChordID<String>, DataContainer> e : keyValueMap.entrySet()) {
-//      try {
-//        localStorage.put(e.getKey().getKey(), e.getValue());
-//      } catch (Exception ex) {
-//        ex.printStackTrace();
-//      }
-//      //result &= putObject(e.getKey(), e.getValue());
-//    }
     return result;
   }
 
