@@ -234,9 +234,9 @@ public class ImmutableStore implements LocalStorage {
     }
 
     /* The B+Tree is essentially going to store a Long value for key, and
-an Integer value for the value. The Long value is going to be a timestamp of
-when the current value was added into the system and Integer value is going to
-be the offset of the actual storage location of  that value. */
+    an Integer value for the value. The Long value is going to be a timestamp of
+    when the current value was added into the system and Integer value is going to
+    be the offset of the actual storage location of  that value. */
     private boolean put(String key, byte[] value) {
         BPlusTree<Long, Integer> indexTree;
         File dataFile = dataFilefor(key);
