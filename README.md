@@ -1,5 +1,6 @@
-# KeyValueStore
-This is a simple Distributed Key-Value stored based on 'Chord' Protocol. 
+# Chronstore
+This is a simple Immutable and Distributed Key-Value store.
+
 It is a completely distributed peer-to-peer system (No central server).
 It provides a simple 'get' & 'put' API to store or retrieve the objects. System can easily accomodate new nodes and can efficiently handle existing node failure. All data is replicated to prevent data
 loss.
