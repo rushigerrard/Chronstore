@@ -43,12 +43,28 @@ public class ImmutableStore implements LocalStorage {
     }
 
     /* helper methods */
+
+    /**
+     * To avoid creating too many files in a single directory, all index and data
+     * files will be created inside a directory decided by the first two and last
+     * two letters of the key.
+     * @param key
+     * @return
+     */
     private File indexFileFor(String key) {
-        return new File(metaDirPath + key.toString() + ".index");
+        String firstTwoChar = key.substring(0, 2);
+        String lastTwoChar = key.substring(key.length() - 2, key.length());
+        String path = metaDirPath + firstTwoChar + "/"  + lastTwoChar +
+                "/" + key.toString() + ".index";
+        return new File(path);
     }
 
     private File dataFilefor(String key) {
-        return new File(dataDirPath + key.toString() + ".data");
+        String firstTwoChar = key.substring(0, 2);
+        String lastTwoChar = key.substring(key.length() - 2, key.length());
+        String path = dataDirPath + firstTwoChar + "/" + lastTwoChar
+                + "/" +  key.toString() + ".index";
+        return new File(path);
     }
 
     /**
@@ -67,8 +83,12 @@ public class ImmutableStore implements LocalStorage {
             /* Data file can not exist without a index file
              If index file is not found it means data file also
              has to be created. */
+            /* Since we put all data and indexes in nested
+            directories, we will have to create those too */
                 logger.debug("New data files created for " + key);
+                indexFile.getParentFile().mkdirs();
                 indexFile.createNewFile();
+                dataFile.getParentFile().mkdirs();
                 dataFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
