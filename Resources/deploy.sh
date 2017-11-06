@@ -1,90 +1,104 @@
 #!/bin/bash
-# set -x
+set -x
 
-# GITHUB_TOKEN=d5b4a6611363172dce6dee49cf9db293cfac6fde
+USER=aabarve
+SSH_OPT="-o StrictHostKeyChecking=no"
+SCP_OPT="-r -o StrictHostKeyChecking=no"
 
-if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 USER IP-ADDRESS BRANCH" >&2
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <ip-address-file" >&2
+  echo "The ip-address file should contain one IP address per line"
   exit 1
 fi
 
-USER=$1
-IP=$2
-BRANCH=$3
+LOG_SERVER_IP=""
+IP_LIST=""
+i=0
+ipList=()
+while read -r line || [[ -n "$line" ]]; do
+    echo "$i: $line"
+    IP_LIST=${line}","${IP_LIST}
+    ipList[$i]=$line
+    ((i++))
+done < "$1"
+LOG_SERVER_IP=${ipList[0]}
+echo "IP LIST: ${IP_LIST}, logging server at : ${LOG_SERVER_IP}"
 
-echo "USER: ${USER}, IP: ${IP}, BRANCH: ${BRANCH}"
+# Update log.properties file before creating jar
+sed s/localhost/${LOG_SERVER_IP}/g ../Chord/src/main/resources/log4j.properties > ../Chord/src/main/resources/log4j.chord.properties
+sed s/localhost/${LOG_SERVER_IP}/g ../ObjectStore/src/main/resources/log4j.properties > ../ObjectStore/src/main/resources/log4j.objectstore.properties
+sed s/localhost/${LOG_SERVER_IP}/g ../Client/src/main/resources/log4j.properties > ../Client/src/main/resources/log4j.client.properties
+
+
+echo "Building Chord.."
+cd ../Chord
+mvn clean install
+
+echo "Building ObjectStore.."
+cd ../ObjectStore
+mvn clean compile -DskipTests=true assembly:single
+
+echo "Building client libraries.."
+cd ../Client
+mvn clean compile assembly:single
+
+
+cd ../Resources
+numIP=${#ipList[@]}
+for (( i=0; i<${numIP}; i++ ));
+do
+    IP=${ipList[$i]}
+    echo "setting up: ${IP}"
+
+    # copy the iplist file to all machines
+    scp ${SCP_OPT} $1 ${USER}@${IP}:nodes
+    # copy log properties for server
+    scp ${SCP_OPT} log_server ${USER}@${IP}:
+    # copy jar files
+    scp ${SCP_OPT} ../Client/target/client*.jar ${USER}@${IP}:
+    scp ${SCP_OPT} ../ObjectStore/target/ObjectStore*.jar ${USER}@${IP}:
+    ssh ${SSH_OPT} ${USER}@${IP} 'bash -s' < setup.sh ${IP_LIST}
+    
+    # setup logging server on very first ip
+    if [ $i -eq 0 ]
+    then
+	ssh ${SSH_OPT} ${USER}@${IP} 'bash -s' <<EOF
+
+echo "Starting log server on first node.."
+cd log_server
+
+# Get log4j jar
+wget -O log4j-1.2.17.jar http://central.maven.org/maven2/log4j/log4j/1.2.17/log4j-1.2.17.jar
+
+# start all 3 logging services
+nohup java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4712 log4j.Chord.properties </dev/null >/dev/null &
+nohup java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4713 log4j.KeyStore.properties </dev/null >/dev/null &
+nohup java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4714 log4j.Analysis.properties </dev/null >/dev/null &
+EOF
+    fi
+done
+
+# connect to first node and start log server
+
+# echo "USER: ${USER}, IP: ${IP}, BRANCH: ${BRANCH}"
 
 # copy dockerfile to machine
 # scp Dockerfile ${USER}@${IP}:/home/${USER}
 
-ssh -i ~/.ssh/id_rsa -o "StrictHostKeyChecking=no" ${USER}@${IP} IP=${IP} BRANCH=${BRANCH} 'bash -s' << 'EOF'
-
-echo "USER: ${USER}, IP: ${IP}, BRANCH: ${BRANCH}"
-
-sudo chown -R ${USER} .
-
-echo "Running on: " `hostname` "with user: ${USER}"
-
-sleep 2
-
-# clone the git repo and change to given branch
-git clone https://d5b4a6611363172dce6dee49cf9db293cfac6fde@github.ncsu.edu/aabarve/chronstore.git
-cd chronstore
-git checkout ${BRANCH}
-cd ..
-
-# Setup logging
-mkdir logs
-# Get config files into logs
-cp chronstore/Resources/log_server/* logs
-cd logs
+# copy the chronstore source into host machine
 
 
-# Get log4j jar
-wget http://central.maven.org/maven2/log4j/log4j/1.2.17/log4j-1.2.17.jar
-
-# start all 3 logging services
-java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4712 log4j.Chord.properties &
-java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4713 log4j.KeyStore.properties &
-java -cp log4j-1.2.17.jar org.apache.log4j.net.SimpleSocketServer 4714 log4j.Analysis.properties &
-
-cd ..
-
-# Change the hostname in log4j.properties files 
-sed -i.bak s/localhost/${IP}/g chronstore/Chord/src/main/resources/log4j.properties
-sed -i.bak s/localhost/${IP}/g chronstore/ObjectStore/src/main/resources/log4j.properties
-sed -i.bak s/localhost/${IP}/g chronstore/Client/src/main/resources/log4j.properties
 
 
-# STEP: install docker
-# add repo
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt-get update
-sudo apt-get install -y maven git emacs24 \
-     apt-transport-https \
-     ca-certificates \
-     curl \
-     gnupg2 \
-     software-properties-common \
-     docker-ce \
-     python-pip \
-     python-dev \
-     build-essential 
-sudo pip install docker
 
-# get Dockerfile
-cp chronstore/Resources/Dockerfile .
 
-# Setup machine to accept packets from docker 
-sudo iptables -A INPUT -i docker0 -j ACCEPT
 
-# Build the image
-sudo docker build -t chronstore .
 
-echo "Done building image.."
 
-# Run the container - this should go in drun
-# sudo docker run -v ~/chronstore:/root/chronstore chronstore
 
-EOF
+
+
+
+
+
+

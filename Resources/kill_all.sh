@@ -24,5 +24,8 @@ for (( i=0; i<${numIP}; i++ ));
 do
     IP=${ipList[$i]}
     echo "kill process at: ${IP}"
-    ssh ${SSH_OPT} ${USER}@${IP} killall java
+    ssh ${SSH_OPT} ${USER}@${IP} <<EOF
+killall java
+rm -rf log_server *.jar nodes
+EOF
 done
