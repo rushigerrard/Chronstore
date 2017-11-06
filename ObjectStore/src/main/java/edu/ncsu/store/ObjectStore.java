@@ -108,7 +108,7 @@ class ObjectStore implements ObjectStoreOperations {
     try {
       StringBuilder log = new StringBuilder("For node: "+ ObjectStoreService.getChordSession().getChordNodeID()+ "\n");
       for (Map.Entry<KeyMetadata, byte[]> e : replicaData.entrySet()) {
-        log.append("Putting key :" + e.getKey() + " value: " + e.getValue() + "\n");
+        log.append("Putting key :" + e.getKey().key + " value: " + new String(e.getValue()) + "\n");
         // e.getKey() will return hashMap key of this entry, in our hashmap key is Object of
         // KeyMetadata.
         // e.getKey().key will return key field inside KeyMetadata object. This key field holds

@@ -47,23 +47,36 @@ public class ImmutableStore implements LocalStorage {
     /**
      * To avoid creating too many files in a single directory, all index and data
      * files will be created inside a directory decided by the first two and last
-     * two letters of the key.
+     * two letters of the key. If the key length is less than 2 (i.e = 1), then we append an
+     * extra character '_' at the end of of the key and then take those  two characters
      * @param key
      * @return
      */
     private File indexFileFor(String key) {
-        String firstTwoChar = key.substring(0, 2);
-        String lastTwoChar = key.substring(key.length() - 2, key.length());
+        String firstTwoChar, lastTwoChar;
+        if (key.length() < 2) {
+            firstTwoChar = key + "_";
+            lastTwoChar = key + "_";
+        } else {
+            firstTwoChar = key.substring(0, 2);
+            lastTwoChar = key.substring(key.length() - 2, key.length());
+        }
         String path = metaDirPath + firstTwoChar + "/"  + lastTwoChar +
                 "/" + key.toString() + ".index";
         return new File(path);
     }
 
     private File dataFilefor(String key) {
-        String firstTwoChar = key.substring(0, 2);
-        String lastTwoChar = key.substring(key.length() - 2, key.length());
+        String firstTwoChar, lastTwoChar;
+        if (key.length() < 2) {
+            firstTwoChar = key + "_";
+            lastTwoChar = key + "_";
+        } else {
+            firstTwoChar = key.substring(0, 2);
+            lastTwoChar = key.substring(key.length() - 2, key.length());
+        }
         String path = dataDirPath + firstTwoChar + "/" + lastTwoChar
-                + "/" +  key.toString() + ".index";
+                + "/" +  key.toString() + ".data";
         return new File(path);
     }
 

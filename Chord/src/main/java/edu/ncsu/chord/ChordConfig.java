@@ -19,9 +19,16 @@ class ChordConfig {
   static ArrayList<InetAddress> bootstrapNodes;
 
   static {
+    // Read environment variables for finding out bootstrap nodes
+    // An environment variable named CHRON_BOOTSTRAP_NODELIST will have
+    // a comma separated list of bootstrap node IP
+    String ipArray[] = System.getenv("CHRON_BOOTSTRAP_NODELIST").split(",");
     bootstrapNodes = new ArrayList<>();
     try {
-      bootstrapNodes.add(InetAddress.getByName("172.17.0.2"));
+      for (String s : ipArray) {
+        if (s != null && !s.isEmpty())
+          bootstrapNodes.add(InetAddress.getByName(s));
+      }
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -31,7 +38,7 @@ class ChordConfig {
   static int RMI_REGISTRY_PORT = 1099;
 
   /* Network interface to be used for communication */
-  static String NetworkInterface = "eth0";
+  static String NetworkInterface = "eth1";
 
   /* Seconds to wait before stabilization process starts */
   static int STABILIZER_INITIAL_DELAY = 2;

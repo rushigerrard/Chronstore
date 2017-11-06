@@ -22,10 +22,9 @@ import edu.ncsu.store.StoreConfig;
 public class Client {
 
   private final transient static Logger logger = Logger.getLogger(Client.class);
-
-  /* All keys-values used for get & put will be taken & verified from below file */
-  private String inputDataPath = "/root/chronstore/Resources/tests/input_keys";
-  private String ipListPath = "/root/chronstore/Resources/tests/node_ip_list";
+  /* All keys-values used for get & put will bef taken & verified from below file */
+  private static String inputDataPath;
+  private static String ipListPath;
 
   HashMap<String, String> keyValueMap;
   ArrayList<ChordID<InetAddress>> ipList;
@@ -57,7 +56,8 @@ public class Client {
     } catch (Exception e) {
       e.printStackTrace();
     }
-
+    // Set the very first entry in this list as bootstrap IP
+    ClientConfig.bootStrapIP = ipList.get(0).getKey().toString().substring(1);
   }
 
   public void putKeys() {
@@ -166,10 +166,12 @@ public class Client {
 
   public static void main(String args[]) {
     System.out.println("Arg1: " + args[0] + " Arg2:" + args[1]);
-    if (args.length != 2) {
-      System.out.println("Usage: java Client <PUT/GET/TEST> <NKEYS>");
+    if (args.length != 4) {
+      System.out.println("Usage: java Client <PUT/GET/TEST> <NKEYS> <ip-file-path> <Key-file-path> ");
       System.exit(0);
     }
+    ipListPath = args[2];
+    inputDataPath = args[3];
     Client c = new Client(Integer.parseInt(args[1]));
     switch (args[0]) {
       case "PUT":
