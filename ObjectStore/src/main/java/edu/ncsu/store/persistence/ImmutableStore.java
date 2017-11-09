@@ -61,8 +61,8 @@ public class ImmutableStore implements LocalStorage {
             firstTwoChar = key.substring(0, 2);
             lastTwoChar = key.substring(key.length() - 2, key.length());
         }
-        String path = metaDirPath + firstTwoChar + "/"  + lastTwoChar +
-                "/" + key.toString() + ".index";
+        String path = metaDirPath + firstTwoChar + File.separator  + lastTwoChar +
+                File.separator + key.toString() + ".index";
         return new File(path);
     }
 
@@ -75,8 +75,8 @@ public class ImmutableStore implements LocalStorage {
             firstTwoChar = key.substring(0, 2);
             lastTwoChar = key.substring(key.length() - 2, key.length());
         }
-        String path = dataDirPath + firstTwoChar + "/" + lastTwoChar
-                + "/" +  key.toString() + ".data";
+        String path = dataDirPath + firstTwoChar + File.separator + lastTwoChar
+                + File.separator +  key.toString() + ".data";
         return new File(path);
     }
 
@@ -246,14 +246,20 @@ public class ImmutableStore implements LocalStorage {
     }
 
 
-    @Override
-    public boolean put(KeyMetadata km, byte[] value) {
+    /**
+     * This PUT API has only been added for testing purposes, hence it is not made public
+     * @param km The keymetadata
+     * @param value value out the key
+     * @param timestamp The timestamp that should be used
+     * @return
+     */
+    boolean put(KeyMetadata km, byte[] value, long timestamp) {
         // First persist the data and indexes
         boolean success = false;
         if (km == null || value == null)
             throw new NullPointerException("Key or value can not be null!");
 
-        if (put(km.getKey().getKey(), value)) {
+        if (put(km.getKey().getKey(), value, timestamp)) {
             // Write to data file is complete now add this into metadata list
             ArrayList<KeyMetadata> mList = readMetadata();
             if (!mList.contains(km)) {
@@ -266,11 +272,33 @@ public class ImmutableStore implements LocalStorage {
         return success;
     }
 
+
+    @Override
+    public boolean put(KeyMetadata km, byte[] value) {
+        // First persist the data and indexes
+        boolean success = false;
+        if (km == null || value == null)
+            throw new NullPointerException("Key or value can not be null!");
+
+        if (put(km.getKey().getKey(), value, System.currentTimeMillis())) {
+            // Write to data file is complete now add this into metadata list
+            ArrayList<KeyMetadata> mList = readMetadata();
+            if (!mList.contains(km)) {
+                mList.add(km);
+                // write back
+                write(serialize(mList), metadataFile.getPath(), false);
+            }
+            success = true;
+        }
+        return success;
+    }
+
+
     /* The B+Tree is essentially going to store a Long value for key, and
     an Integer value for the value. The Long value is going to be a timestamp of
     when the current value was added into the system and Integer value is going to
     be the offset of the actual storage location of  that value. */
-    private boolean put(String key, byte[] value) {
+    private boolean put(String key, byte[] value, long timestamp) {
         BPlusTree<Long, Integer> indexTree;
         File dataFile = dataFilefor(key);
         File indexFile = indexFileFor(key);
@@ -310,7 +338,7 @@ public class ImmutableStore implements LocalStorage {
         }
         int offset = prevOffset + wlen;
         logger.debug("Written new value between " + prevOffset + " - " + offset);
-        indexTree.insert(System.currentTimeMillis(), offset);
+        indexTree.insert(timestamp, offset);
 
         // write back the index tree
         wlen = write(serialize(indexTree), indexFile.getPath(), false);
@@ -411,7 +439,7 @@ public class ImmutableStore implements LocalStorage {
     @Override
     public boolean delete(String key) {
         if (containsKey(key)) {
-            put(key, null);
+            put(key, null, System.currentTimeMillis());
         }
         return true;
     }

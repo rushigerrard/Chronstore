@@ -125,7 +125,7 @@ class ObjectStore implements ObjectStoreOperations {
 
   @Override
   public boolean removeReplica(ChordID<String> key) throws RemoteException {
-    return false;
+    return localStorage.delete(key.getKey());
   }
 
   @Override

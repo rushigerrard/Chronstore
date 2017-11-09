@@ -119,7 +119,7 @@ public class ImmutableStoreTest {
         store.put(km, data.getBytes());
         Thread.sleep(100);
         byte[] retVal = store.get(key);
-        System.out.println("received: ["+new String(retVal)+"]");
+        //System.out.println("received: ["+new String(retVal)+"]");
         Assert.assertEquals("get value doesn't match with put value", data, new String(retVal));
     }
 //
