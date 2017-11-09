@@ -22,15 +22,18 @@ class ChordConfig {
     // Read environment variables for finding out bootstrap nodes
     // An environment variable named CHRON_BOOTSTRAP_NODELIST will have
     // a comma separated list of bootstrap node IP
-    String ipArray[] = System.getenv("CHRON_BOOTSTRAP_NODELIST").split(",");
     bootstrapNodes = new ArrayList<>();
-    try {
-      for (String s : ipArray) {
-        if (s != null && !s.isEmpty())
-          bootstrapNodes.add(InetAddress.getByName(s));
+    String nodeList = System.getenv("CHRON_BOOTSTRAP_NODELIST");
+    if (nodeList != null && !nodeList.isEmpty()) {
+      String ipArray[] = nodeList.split(",");
+      try {
+        for (String s : ipArray) {
+          if (s != null && !s.isEmpty())
+            bootstrapNodes.add(InetAddress.getByName(s));
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Exception e) {
-      e.printStackTrace();
     }
   }
 
