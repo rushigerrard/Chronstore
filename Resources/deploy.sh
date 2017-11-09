@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
-
-USER=aabarve
+sudo apt install maven
+USER=rsghatpa
 SSH_OPT="-o StrictHostKeyChecking=no"
 SCP_OPT="-r -o StrictHostKeyChecking=no"
 
@@ -36,6 +36,7 @@ mvn clean install
 
 echo "Building ObjectStore.."
 cd ../ObjectStore
+mvn clean install
 mvn clean compile -DskipTests=true assembly:single
 
 echo "Building client libraries.."
