@@ -34,8 +34,8 @@ sudo apt-get install -y maven git emacs24 \
 # sudo apt-get install -y oracle-java8-installer
 
 
-sudo iptables -A INPUT -i eth1 -j ACCEPT
-sudo iptables -A INPUT -i eth0 -j ACCEPT
+#sudo iptables -A INPUT -i eth1 -j ACCEPT
+#sudo iptables -A INPUT -i eth0 -j ACCEPT
 
 
 echo "Running chord node.."
