@@ -6,6 +6,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 
+echo "Exporting CHRON_BOOTSTRAP_NODELIST=$1"
 # set environment variable
 export CHRON_BOOTSTRAP_NODELIST=$1
 

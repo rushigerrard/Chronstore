@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 sudo apt install maven
-USER=rsghatpa
+USER=aabarve
 SSH_OPT="-o StrictHostKeyChecking=no"
 SCP_OPT="-r -o StrictHostKeyChecking=no"
 
@@ -17,7 +17,7 @@ i=0
 ipList=()
 while read -r line || [[ -n "$line" ]]; do
     echo "$i: $line"
-    IP_LIST=${line}","${IP_LIST}
+    IP_LIST=${IP_LIST}","${line}
     ipList[$i]=$line
     ((i++))
 done < "$1"

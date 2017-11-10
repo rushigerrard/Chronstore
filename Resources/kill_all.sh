@@ -27,5 +27,6 @@ do
     ssh ${SSH_OPT} ${USER}@${IP} <<EOF
 killall java
 rm -rf log_server *.jar nodes
+rm -rf /tmp/data/* /tmp/indexes/*
 EOF
 done
