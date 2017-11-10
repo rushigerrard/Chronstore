@@ -1,4 +1,4 @@
-package edu.ncsu.store.persistence;
+package edu.ncsu.store.cache;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -18,26 +18,8 @@ import java.util.function.BiConsumer;
  */
 public class LRUCache<K, V> {
 
-    private class Node<T1, T2> {
-        T1 t1;
-        T2 t2;
-
-        Node(T1 t1, T2 t2) {
-            this.t1 = t1;
-            this.t2 = t2;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == null || !(o instanceof LRUCache))
-                return false;
-            return ((Node) o).t1 == t1 &&
-                    ((Node) o).t2 == t2;
-        }
-    }
-
-    private LinkedList<Node<K, V>> list;
-    private Map<K, Node<K, V>> map;
+    private LinkedList<CacheNode<K, V>> list;
+    private Map<K, CacheNode<K, V>> map;
     private int maximumCapacity;
 
     /* accept method of provided BiConsumer will be called whenever an element is about
@@ -63,7 +45,7 @@ public class LRUCache<K, V> {
 
     public V get(K key) {
         if (map.containsKey(key)) {
-            Node<K, V> node = map.get(key);
+            CacheNode<K, V> node = map.get(key);
             list.remove(node);
             list.add(node);
             return node.t2;
@@ -72,7 +54,7 @@ public class LRUCache<K, V> {
     }
 
     private void removeLRU() {
-        Node<K, V> removed = list.remove(0);
+        CacheNode<K, V> removed = list.remove(0);
         map.remove(removed.t1);
         removalListener.accept(removed.t1, removed.t2);
     }
@@ -80,12 +62,12 @@ public class LRUCache<K, V> {
     public void put(K key, V value) {
         if (list.size() == maximumCapacity)
             removeLRU();
-        Node<K, V> node;
+        CacheNode<K, V> node;
         if (map.containsKey(key)) {
             node = map.get(key);
             list.remove(node);
         } else {
-            node = new Node<>(key, value);
+            node = new CacheNode<>(key, value);
         }
         list.add(node);
     }

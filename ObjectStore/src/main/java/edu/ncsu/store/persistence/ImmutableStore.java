@@ -8,7 +8,9 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ImmutableStore implements LocalStorage {
 
@@ -22,6 +24,11 @@ public class ImmutableStore implements LocalStorage {
     File indexDir = new File(metaDirPath);
     File dataDir = new File(dataDirPath);
     File metadataFile = new File(metaDirPath + "metadata");
+
+    /* A cache for storing the offset (in data file) at which lateset value is written
+    * when this cache hit occurs we don't have to read index file for finding out offset
+    * This will save a lot of time spend in reading and serializing index file*/
+    Map<String, Pair<Integer, Integer>> offsetCache = new HashMap<>();
 
     public ImmutableStore() throws Exception {
         // Create the data directories if they don't exist
@@ -327,8 +334,10 @@ public class ImmutableStore implements LocalStorage {
         // offset where this object was written is currently stored as the
         // last leaf of index tree. Get the new offset for next object
         // by adding length of currently written object into previous object
-        // However, the get method returns pair of last two offsets, we just
-        // need second one of that pair
+        // However, the get method returns pair of last two offsets,
+        // In this pair, pair.first has the ending value and pair.second has
+        // the start value.
+        // we just need the ending value (pair.first) of that
         Pair<Integer, Integer> prevOffsetPair = indexTree.get();
         int prevOffset;
         if (prevOffsetPair == null) {
@@ -339,7 +348,8 @@ public class ImmutableStore implements LocalStorage {
         int offset = prevOffset + wlen;
         logger.debug("Written new value between " + prevOffset + " - " + offset);
         indexTree.insert(timestamp, offset);
-
+        // Also put this offset pair in offset cache
+        offsetCache.put(key, new Pair<>(offset, prevOffset));
         // write back the index tree
         wlen = write(serialize(indexTree), indexFile.getPath(), false);
         if (wlen == -1) {
@@ -395,11 +405,18 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public byte[] get(String key) {
-        BPlusTree<Long, Integer> indexTree;
+        Pair<Integer, Integer> p;
         String dataFilePath = dataFilefor(key).getPath();
-        String indexFilePath = indexFileFor(key).getPath();
-        indexTree = readIndexes(indexFilePath);
-        Pair<Integer, Integer> p = indexTree.get();
+        /* This is a call for latest value, see if its offset is available in cache
+        and use that to avoid read of index file */
+        if (offsetCache.containsKey(key)) {
+            p = offsetCache.get(key);
+        } else {
+            BPlusTree<Long, Integer> indexTree;
+            String indexFilePath = indexFileFor(key).getPath();
+            indexTree = readIndexes(indexFilePath);
+            p = indexTree.get();
+        }
         p = errorCheck(p);
         // returned pair object has key as the offset at timestamp and value
         // as the offset before timestamp.
