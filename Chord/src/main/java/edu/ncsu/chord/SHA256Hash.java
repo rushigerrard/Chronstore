@@ -31,7 +31,7 @@ public class SHA256Hash implements Hash, Serializable {
     this.MAX_BITS = MAX_BITS;
     MOD = (long) Math.pow(2, MAX_BITS);
     hashValue = hash(input) % MOD;
-    logger.info(" Hash input: " + input +
+    logger.debug(" Hash input: " + input +
                  " Generated hash: " + hashValue +
                  " MOD :" + MOD +
                  " MAX_BITS: " + MAX_BITS);

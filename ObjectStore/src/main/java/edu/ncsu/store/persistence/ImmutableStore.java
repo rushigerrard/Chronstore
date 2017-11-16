@@ -7,10 +7,13 @@ import edu.ncsu.store.utils.Pair;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ImmutableStore implements LocalStorage {
 
@@ -23,16 +26,38 @@ public class ImmutableStore implements LocalStorage {
 
     File indexDir = new File(metaDirPath);
     File dataDir = new File(dataDirPath);
-    File metadataFile = new File(metaDirPath + "metadata");
+    String metadataFilePath = metaDirPath + "metadata";
 
     /* A cache for storing the offset (in data file) at which lateset value is written
     * when this cache hit occurs we don't have to read index file for finding out offset
     * This will save a lot of time spend in reading and serializing index file*/
     Map<String, Pair<Integer, Integer>> offsetCache = new HashMap<>();
 
+
+    /* Whenever multiple updates happen to same key our index file is written with new values.
+     * we need to make sure that we don't allow multiple threads to write simultaneously. For this
+     * write operations on index file of the same key will be synchronized. Moreover, each write
+     * operation will write the new data to a different file and will then rename that file in
+     * an atomic operation (Note: Atomic rename is supported on Linux, no guarantee that it will
+     * work correctly on windows). Also, our readers can keep reading old file in between, but once
+     * rename is done they will start seeing the new values.
+     * To handle this we maintain a ReadWrite lock for each key in a ConcurrentHashMap, if that
+     * value is present in the map, then it means some other thread is currently writing to the
+     * file. Once the writing is done this value will be removed from hashMap, the waiting thread
+     * (Which was in busy-wait while loop) will now see that key does not exist in hashmap anymore
+     * and hence will go in.
+     * */
+    ConcurrentHashMap<String, Semaphore> fileAccessLocks =
+            new ConcurrentHashMap<>(1000, 0.9f, 2);
+
+    /* A separate lock is used for modifying metadata files */
+    Semaphore metadataLock = new Semaphore(1);
+
+
     public ImmutableStore() throws Exception {
         // Create the data directories if they don't exist
         boolean res = true;
+        File metadataFile = new File(metadataFilePath);
         if (!indexDir.exists()) {
             res &= indexDir.mkdir();
         }
@@ -42,7 +67,7 @@ public class ImmutableStore implements LocalStorage {
         if (!metadataFile.exists()) {
             metadataFile.createNewFile();
             // For metadata list, write empty list to file
-            write(serialize(new ArrayList<KeyMetadata>()), metadataFile.getPath(), false);
+            write(serialize(new HashSet<KeyMetadata>()), metadataFilePath, false);
         }
         if (!res) {
             throw new Exception("Data directories can not be created");
@@ -56,6 +81,7 @@ public class ImmutableStore implements LocalStorage {
      * files will be created inside a directory decided by the first two and last
      * two letters of the key. If the key length is less than 2 (i.e = 1), then we append an
      * extra character '_' at the end of of the key and then take those  two characters
+     *
      * @param key
      * @return
      */
@@ -68,7 +94,7 @@ public class ImmutableStore implements LocalStorage {
             firstTwoChar = key.substring(0, 2);
             lastTwoChar = key.substring(key.length() - 2, key.length());
         }
-        String path = metaDirPath + firstTwoChar + File.separator  + lastTwoChar +
+        String path = metaDirPath + firstTwoChar + File.separator + lastTwoChar +
                 File.separator + key.toString() + ".index";
         return new File(path);
     }
@@ -83,21 +109,24 @@ public class ImmutableStore implements LocalStorage {
             lastTwoChar = key.substring(key.length() - 2, key.length());
         }
         String path = dataDirPath + firstTwoChar + File.separator + lastTwoChar
-                + File.separator +  key.toString() + ".data";
+                + File.separator + key.toString() + ".data";
         return new File(path);
     }
 
     /**
-     * Creates storage files for given key. This essentially means creating the
-     * index file and data file for that key.
+     * Creates a temporary storage files for given key. This essentially means creating the
+     * index file and data file for that key with .tmp extension. This is because
+     * when multiple thread try to read a file while one thread is creating it we don't
+     * want any thread to read empty file
      *
      * @param key
      * @return
      */
     private boolean createStorageForKey(String key) {
         // if key index and data file is not already present then create it
-        File dataFile = indexFileFor(key);
-        File indexFile = dataFilefor(key);
+        File indexFile = new File(indexFileFor(key).getAbsolutePath() + ".tmp");
+        File dataFile = new File(dataFilefor(key).getAbsolutePath() + ".tmp");
+
         if (!dataFile.exists() && !indexFile.exists()) {
             try {
             /* Data file can not exist without a index file
@@ -118,6 +147,34 @@ public class ImmutableStore implements LocalStorage {
         return true;
     }
 
+    /**
+     * Simply renames the given file name from <filename>.tmp to <filename>
+     *
+     * @param tempFilePath
+     */
+    private void finalizeStorageFile(String tempFilePath, String newName) {
+        try {
+            Files.move(Paths.get(tempFilePath), Paths.get(newName),
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Renames to temporary storage created for the key to proper named copy
+     *
+     * @param key
+     */
+    private void finalizeStorageForKey(String key) {
+        String tmpIndexFilePath = indexFileFor(key).getAbsolutePath() + ".tmp";
+        String tmpDataFilePath = dataFilefor(key).getAbsolutePath() + ".tmp";
+        String actualIndexFilePath = indexFileFor(key).getAbsolutePath();
+        String actualDataFilePath = dataFilefor(key).getAbsolutePath();
+
+        finalizeStorageFile(tmpDataFilePath, actualDataFilePath);
+        finalizeStorageFile(tmpIndexFilePath, actualIndexFilePath);
+    }
 
     /**
      * Reads the data from given file at given offset. Total number of bytes read will
@@ -154,7 +211,7 @@ public class ImmutableStore implements LocalStorage {
      */
     private int write(byte[] buffer, String filePath,
                       boolean append) {
-        try (FileOutputStream fs = new FileOutputStream(filePath, append)){
+        try (FileOutputStream fs = new FileOutputStream(filePath, append)) {
             if (!append) {
                 // truncate the file
                 fs.getChannel().truncate(0);
@@ -218,24 +275,25 @@ public class ImmutableStore implements LocalStorage {
         byte buf[] = new byte[(int) indexFile.length()];
         int rlen = read(buf, filePath, 0, (int) indexFile.length());
         if (rlen == -1) {
-            logger.debug("Error while reading index file");
+            logger.error("Error while reading index file");
             return null;
         }
         return (BPlusTree<Long, Integer>) deserialize(buf, BPlusTree.class);
     }
 
-    private ArrayList<KeyMetadata> readMetadata() {
+    private HashSet<KeyMetadata> readMetadata() {
+        File metadataFile = new File(metadataFilePath);
         byte[] serializedMetadata = new byte[(int) metadataFile.length()];
         read(serializedMetadata, metadataFile.getPath(), 0, (int) metadataFile.length());
-        return deserialize(serializedMetadata, ArrayList.class);
+        return deserialize(serializedMetadata, HashSet.class);
     }
 
     @Override
     public boolean containsKey(String key) {
         if (key == null || key.isEmpty())
             return false;
-        ArrayList<KeyMetadata> mList = readMetadata();
-        for (KeyMetadata km : mList) {
+        HashSet<KeyMetadata> mSet = readMetadata();
+        for (KeyMetadata km : mSet) {
             if (km.getKey().getKey().equals(key))
                 return true;
         }
@@ -244,8 +302,8 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public KeyMetadata getMetadata(String key) {
-        ArrayList<KeyMetadata> mList = readMetadata();
-        for (KeyMetadata km : mList) {
+        HashSet<KeyMetadata> mSet = readMetadata();
+        for (KeyMetadata km : mSet) {
             if (km.getKey().getKey().equals(key))
                 return km;
         }
@@ -255,48 +313,75 @@ public class ImmutableStore implements LocalStorage {
 
     /**
      * This PUT API has only been added for testing purposes, hence it is not made public
-     * @param km The keymetadata
-     * @param value value out the key
+     *
+     * @param km        The keymetadata
+     * @param value     value out the key
      * @param timestamp The timestamp that should be used
      * @return
      */
-    boolean put(KeyMetadata km, byte[] value, long timestamp) {
-        // First persist the data and indexes
-        boolean success = false;
-        if (km == null || value == null)
-            throw new NullPointerException("Key or value can not be null!");
-
-        if (put(km.getKey().getKey(), value, timestamp)) {
-            // Write to data file is complete now add this into metadata list
-            ArrayList<KeyMetadata> mList = readMetadata();
-            if (!mList.contains(km)) {
-                mList.add(km);
-                // write back
-                write(serialize(mList), metadataFile.getPath(), false);
-            }
-            success = true;
-        }
-        return success;
-    }
-
-
+//    boolean put(KeyMetadata km, byte[] value, long timestamp) {
+//        // First persist the data and indexes
+//        boolean success = false;
+//        if (km == null || value == null)
+//            throw new NullPointerException("Key or value can not be null!");
+//
+//        if (put(km.getKey().getKey(), value, timestamp)) {
+//            // Write to data file is complete now add this into metadata list
+//            HashSet<KeyMetadata> mSet = readMetadata();
+//            if (!mSet.contains(km)) {
+//                mSet.add(km);
+//                // write back
+//                write(serialize(mSet), metadataFilePath, false);
+//            }
+//            success = true;
+//        }
+//        return success;
+//    }
     @Override
     public boolean put(KeyMetadata km, byte[] value) {
         // First persist the data and indexes
         boolean success = false;
         if (km == null || value == null)
             throw new NullPointerException("Key or value can not be null!");
-
-        if (put(km.getKey().getKey(), value, System.currentTimeMillis())) {
-            // Write to data file is complete now add this into metadata list
-            ArrayList<KeyMetadata> mList = readMetadata();
-            if (!mList.contains(km)) {
-                mList.add(km);
-                // write back
-                write(serialize(mList), metadataFile.getPath(), false);
-            }
-            success = true;
+        String indexFilePath, dataFilePath;
+        try {
+            indexFilePath = indexFileFor(km.getKey().getKey()).getCanonicalPath();
+            dataFilePath = dataFilefor(km.getKey().getKey()).getCanonicalPath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
+
+        /* Get locks on both index file and data files, this is the first time
+         * locks will be created for these files, all other operations should
+         * directly take locks */
+        fileAccessLocks.putIfAbsent(dataFilePath, new Semaphore(1));
+        fileAccessLocks.putIfAbsent(indexFilePath, new Semaphore(1));
+
+        try {
+            fileAccessLocks.get(indexFilePath).acquire();
+            fileAccessLocks.get(dataFilePath).acquire();
+            if (put(km.getKey().getKey(), value, System.currentTimeMillis())) {
+                // Write to data file is complete now add this into metadata list
+                metadataLock.acquire();
+                HashSet<KeyMetadata> mSet = readMetadata();
+                if (!mSet.contains(km)) {
+                    mSet.add(km);
+                    // write back
+                    write(serialize(mSet), metadataFilePath + ".tmp", false);
+                    finalizeStorageFile(metadataFilePath + ".tmp", metadataFilePath);
+                }
+                metadataLock.release();
+                success = true;
+            }
+            fileAccessLocks.get(dataFilePath).release();
+            fileAccessLocks.get(indexFilePath).release();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            success = false;
+        }
+
+
         return success;
     }
 
@@ -306,10 +391,21 @@ public class ImmutableStore implements LocalStorage {
     when the current value was added into the system and Integer value is going to
     be the offset of the actual storage location of  that value. */
     private boolean put(String key, byte[] value, long timestamp) {
+        long before, after;
         BPlusTree<Long, Integer> indexTree;
         File dataFile = dataFilefor(key);
         File indexFile = indexFileFor(key);
-        logger.debug("Data file " + dataFile.getPath() + " index file " + indexFile.getPath());
+        String indexFilePath = null, dataFilePath = null;
+
+        try {
+            indexFilePath = indexFile.getCanonicalPath();
+            dataFilePath = dataFile.getCanonicalPath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        logger.debug("Data file " + dataFilePath + " index file " + indexFilePath);
+
         // we have to read index from file, but if this is the first
         // time inserting this key then we will have to create corresponding
         // files
@@ -318,16 +414,22 @@ public class ImmutableStore implements LocalStorage {
             indexTree = new BPlusTree<>();
         } else {
             // file was present - use Java serialization to read it.
+            before = System.currentTimeMillis();
             indexTree = readIndexes(indexFile.getPath());
+            after = System.currentTimeMillis();
+            Profiler.logTimings(Profiler.Event.PUT_INDEX_READ, before, after);
         }
 
-        // Now we have the index tree, write the object to the dataFile
+        // Now we have the index tree, write the object to the temporary dataFile
         // and then insert its index into B+Tree.
         int wlen = 0;
         if (value != null) {
+            before = System.currentTimeMillis();
             wlen = write(value, dataFile.getPath(), true);
+            after = System.currentTimeMillis();
+            Profiler.logTimings(Profiler.Event.PUT_DATA_WRITE, before, after);
             if (wlen == -1) {
-                logger.debug("Unable to write data");
+                logger.error("Unable to write data");
                 return false;
             }
         }
@@ -348,24 +450,31 @@ public class ImmutableStore implements LocalStorage {
         int offset = prevOffset + wlen;
         logger.debug("Written new value between " + prevOffset + " - " + offset);
         indexTree.insert(timestamp, offset);
-        // Also put this offset pair in offset cache
-        offsetCache.put(key, new Pair<>(offset, prevOffset));
         // write back the index tree
-        wlen = write(serialize(indexTree), indexFile.getPath(), false);
+        before = System.currentTimeMillis();
+        wlen = write(serialize(indexTree), indexFile.getPath() + ".tmp", false);
+        after = System.currentTimeMillis();
+        Profiler.logTimings(Profiler.Event.PUT_INDEX_WRITE, before, after);
         if (wlen == -1) {
-            logger.debug("Error while writing index tree");
+            logger.error("Error while writing index tree");
             return false;
         }
+        finalizeStorageFile(indexFilePath + ".tmp", indexFilePath);
+
+        // Also put this offset pair in offset cache - don't put this before finalizing storage
+        // otherwise other thread might read offset from cache but won't find data.
+        offsetCache.put(key, new Pair<>(offset, prevOffset));
+
         return true;
     }
 
     private byte[] readBetween(String filePath, Pair<Integer, Integer> startEndPair) {
-        int length = startEndPair.getFirst() - startEndPair.getSecond() ;
+        int length = startEndPair.getFirst() - startEndPair.getSecond();
         byte[] buf = new byte[length];
         int rlen = read(buf, filePath, startEndPair.getSecond(), length);
         if (rlen == -1) {
             //TODO add logger
-            logger.debug("Error while reading from datafile");
+            logger.error("Error while reading from datafile");
             return null;
         }
         return buf;
@@ -378,6 +487,7 @@ public class ImmutableStore implements LocalStorage {
      * value as null means there is no previous element. Which means read should
      * start at offset 0.
      * Having a non-null value but null key is an Error.
+     *
      * @param p
      * @return
      */
@@ -391,52 +501,77 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public byte[] get(String key, Long timestamp) {
+        byte[] retVal = null;
         BPlusTree<Long, Integer> indexTree;
-        String dataFilePath = dataFilefor(key).getPath();
-        String indexFilePath = indexFileFor(key).getPath();
-        indexTree = readIndexes(indexFilePath);
-        Pair<Integer, Integer> p = indexTree.get(timestamp);
-        p = errorCheck(p);
-        // returned pair object has key as the offset at timestamp and value
-        // as the offset before timestamp.
-        return readBetween(dataFilePath, p);
+        String dataFilePath, indexFilePath;
+        try {
+            dataFilePath = dataFilefor(key).getCanonicalPath();
+            indexFilePath = indexFileFor(key).getCanonicalPath();
+            indexTree = readIndexes(indexFilePath);
+            Pair<Integer, Integer> p = indexTree.get(timestamp);
+            p = errorCheck(p);
+            // returned pair object has key as the offset at timestamp and value
+            // as the offset before timestamp.
+            retVal = readBetween(dataFilePath, p);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return retVal;
     }
 
 
     @Override
     public byte[] get(String key) {
+        long before, after;
         Pair<Integer, Integer> p;
-        String dataFilePath = dataFilefor(key).getPath();
+        byte[] retVal = null;
+        try {
+            String dataFilePath = dataFilefor(key).getCanonicalPath();
+            String indexFilePath = indexFileFor(key).getCanonicalPath();
         /* This is a call for latest value, see if its offset is available in cache
         and use that to avoid read of index file */
-        if (offsetCache.containsKey(key)) {
-            p = offsetCache.get(key);
-        } else {
-            BPlusTree<Long, Integer> indexTree;
-            String indexFilePath = indexFileFor(key).getPath();
-            indexTree = readIndexes(indexFilePath);
-            p = indexTree.get();
+            if (offsetCache.containsKey(key)) {
+                p = offsetCache.get(key);
+            } else {
+                BPlusTree<Long, Integer> indexTree;
+                before = System.currentTimeMillis();
+                indexTree = readIndexes(indexFilePath);
+                after = System.currentTimeMillis();
+                Profiler.logTimings(Profiler.Event.GET_INDEX_READ, before, after);
+                p = indexTree.get();
+            }
+            p = errorCheck(p);
+            // returned pair object has key as the offset at timestamp and value
+            // as the offset before timestamp.
+            before = System.currentTimeMillis();
+            retVal = readBetween(dataFilePath, p);
+            after = System.currentTimeMillis();
+            Profiler.logTimings(Profiler.Event.GET_DATA_READ, before, after);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        p = errorCheck(p);
-        // returned pair object has key as the offset at timestamp and value
-        // as the offset before timestamp.
-        return readBetween(dataFilePath, p);
+
+        return retVal;
     }
 
     @Override
     public List<byte[]> get(String key, Long fromTime, Long toTime) {
         BPlusTree<Long, Integer> indexTree;
-        String dataFilePath = dataFilefor(key).getPath();
-        String indexFilePath = indexFileFor(key).getPath();
-        indexTree = readIndexes(indexFilePath);
-        List<Pair<Integer, Integer>> pList = indexTree.get(fromTime, toTime);
-        List<byte[]> result = new ArrayList<>();
-        // If no key was found within this time interval then this list will be empty
-        for (Pair<Integer, Integer> p : pList) {
-            errorCheck(p);
-            logger.debug("Reading between " + p.getSecond() + " and " + p.getFirst());
-            result.add(readBetween(dataFilePath, p));
-
+        List<byte[]> result = Collections.emptyList();
+        try {
+            String dataFilePath = dataFilefor(key).getCanonicalPath();
+            String indexFilePath = indexFileFor(key).getCanonicalPath();
+            indexTree = readIndexes(indexFilePath);
+            List<Pair<Integer, Integer>> pList = indexTree.get(fromTime, toTime);
+            result = new ArrayList<>();
+            // If no key was found within this time interval then this list will be empty
+            for (Pair<Integer, Integer> p : pList) {
+                errorCheck(p);
+                logger.debug("Reading between " + p.getSecond() + " and " + p.getFirst());
+                result.add(readBetween(dataFilePath, p));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return result;
     }
@@ -449,6 +584,7 @@ public class ImmutableStore implements LocalStorage {
      * we return null to show that value didn't exist at that time.
      * If key is not present already and if delete is called on such key
      * then we don't do anything. Instead we simply return.
+     *
      * @param key
      * @return
      */
@@ -463,7 +599,7 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public List<KeyMetadata> keySet() {
-        return readMetadata();
+        return new ArrayList<>(readMetadata());
     }
 
 }

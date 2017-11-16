@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -150,7 +151,8 @@ public class ImmutableStoreTest {
             expectedList.add(km);
         }
         List<KeyMetadata> actualList = store.keySet();
-        Assert.assertTrue("Key and its metadata should match", expectedList.equals(actualList));
+        Assert.assertTrue("Key and its metadata should match",
+                actualList.containsAll(expectedList));
     }
 
 }
