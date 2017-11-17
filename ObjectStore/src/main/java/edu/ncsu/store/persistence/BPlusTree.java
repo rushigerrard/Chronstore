@@ -342,7 +342,9 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
         rightNode.nextLeaf = tmp;
 
         Entry<K, Node<K,T>> newChildEntry = new AbstractMap.SimpleEntry<K, Node<K,T>>(splitKey, rightNode);
-
+        //Update liveNode pointer to point to rightNode
+        root.liveNode = rightNode;
+		
         return newChildEntry;
     }
 

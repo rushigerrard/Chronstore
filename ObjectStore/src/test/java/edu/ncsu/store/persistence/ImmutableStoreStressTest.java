@@ -28,7 +28,10 @@ public class ImmutableStoreStressTest {
 
     private static final int THREAD_COUNT = 10;
 
-    private static final String randomDatafile = "/tmp/random.txt";
+    /*System temporary directory*/
+    private final static String TMP_DIR = System.getProperty("java.io.tmpdir");
+    
+    private static final String randomDatafile = TMP_DIR + File.separator + "random.txt";
 
     byte[] randomData;
 
@@ -188,8 +191,8 @@ public class ImmutableStoreStressTest {
 
     public static void main(String args[]) {
         // clean old data first
-        delete(new File("/tmp/data"));
-        delete(new File("/tmp/indexes"));
+        delete(new File(TMP_DIR + File.separator +"data"));
+        delete(new File(TMP_DIR + File.separator + "indexes"));
         long before = System.currentTimeMillis();
         ImmutableStoreStressTest isst = new ImmutableStoreStressTest();
         isst.stressTest();
