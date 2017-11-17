@@ -228,6 +228,7 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
         } else {
             IndexNode<K,T> newRoot = new IndexNode<K,T>(newChildEntry.getKey(), root,
                     newChildEntry.getValue());
+            newRoot.liveNode = root.liveNode;
             root = newRoot;
             return;
         }
@@ -276,6 +277,7 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
                         // Create new node and make tree's root-node pointer point to newRoot
                         IndexNode<K,T> newRoot = new IndexNode<K,T>(newChildEntry.getKey(), root,
                                 newChildEntry.getValue());
+                        newRoot.liveNode = root.liveNode;
                         root = newRoot;
                         return null;
                     }
@@ -300,6 +302,7 @@ public class BPlusTree<K extends Comparable<K>, T> implements Serializable {
                 if(leaf == root) {
                     IndexNode<K,T> newRoot = new IndexNode<K,T>(newChildEntry.getKey(), leaf,
                             newChildEntry.getValue());
+                    newRoot.liveNode = root.liveNode;
                     root = newRoot;
                     return null;
                 }
