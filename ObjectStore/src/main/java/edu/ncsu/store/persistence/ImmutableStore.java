@@ -31,7 +31,8 @@ public class ImmutableStore implements LocalStorage {
     /* A cache for storing the offset (in data file) at which lateset value is written
     * when this cache hit occurs we don't have to read index file for finding out offset
     * This will save a lot of time spend in reading and serializing index file*/
-    Map<String, Pair<Integer, Integer>> offsetCache = new HashMap<>();
+    ConcurrentHashMap<String, Pair<Integer, Integer>> offsetCache =
+            new ConcurrentHashMap<>(1000, 0.9f, 2);
 
 
     /* Whenever multiple updates happen to same key our index file is written with new values.
@@ -124,8 +125,8 @@ public class ImmutableStore implements LocalStorage {
      */
     private boolean createStorageForKey(String key) {
         // if key index and data file is not already present then create it
-        File indexFile = new File(indexFileFor(key).getAbsolutePath() + ".tmp");
-        File dataFile = new File(dataFilefor(key).getAbsolutePath() + ".tmp");
+        File indexFile = indexFileFor(key);
+        File dataFile = dataFilefor(key);
 
         if (!dataFile.exists() && !indexFile.exists()) {
             try {
@@ -316,7 +317,6 @@ public class ImmutableStore implements LocalStorage {
      *
      * @param km        The keymetadata
      * @param value     value out the key
-     * @param timestamp The timestamp that should be used
      * @return
      */
 //    boolean put(KeyMetadata km, byte[] value, long timestamp) {
@@ -410,7 +410,7 @@ public class ImmutableStore implements LocalStorage {
         // time inserting this key then we will have to create corresponding
         // files
         if (!indexFile.exists()) {
-            createStorageForKey(key.toString());
+            createStorageForKey(key);
             indexTree = new BPlusTree<>();
         } else {
             // file was present - use Java serialization to read it.
@@ -425,7 +425,7 @@ public class ImmutableStore implements LocalStorage {
         int wlen = 0;
         if (value != null) {
             before = System.currentTimeMillis();
-            wlen = write(value, dataFile.getPath(), true);
+            wlen = write(value, dataFilePath, true);
             after = System.currentTimeMillis();
             Profiler.logTimings(Profiler.Event.PUT_DATA_WRITE, before, after);
             if (wlen == -1) {
@@ -448,11 +448,11 @@ public class ImmutableStore implements LocalStorage {
             prevOffset = prevOffsetPair.getFirst();
         }
         int offset = prevOffset + wlen;
-        logger.debug("Written new value between " + prevOffset + " - " + offset);
+        logger.info("{" + key + "}: Written new value between " + prevOffset + " - " + offset);
         indexTree.insert(timestamp, offset);
         // write back the index tree
         before = System.currentTimeMillis();
-        wlen = write(serialize(indexTree), indexFile.getPath() + ".tmp", false);
+        wlen = write(serialize(indexTree), indexFilePath + ".tmp", false);
         after = System.currentTimeMillis();
         Profiler.logTimings(Profiler.Event.PUT_INDEX_WRITE, before, after);
         if (wlen == -1) {
@@ -501,6 +501,9 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public byte[] get(String key, Long timestamp) {
+        if (!containsKey(key))
+            return null;
+
         byte[] retVal = null;
         BPlusTree<Long, Integer> indexTree;
         String dataFilePath, indexFilePath;
@@ -522,6 +525,9 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public byte[] get(String key) {
+        if (!containsKey(key))
+            return null;
+
         long before, after;
         Pair<Integer, Integer> p;
         byte[] retVal = null;
@@ -556,6 +562,9 @@ public class ImmutableStore implements LocalStorage {
 
     @Override
     public List<byte[]> get(String key, Long fromTime, Long toTime) {
+        if (!containsKey(key))
+            return null;
+
         BPlusTree<Long, Integer> indexTree;
         List<byte[]> result = Collections.emptyList();
         try {
@@ -567,7 +576,7 @@ public class ImmutableStore implements LocalStorage {
             // If no key was found within this time interval then this list will be empty
             for (Pair<Integer, Integer> p : pList) {
                 errorCheck(p);
-                logger.debug("Reading between " + p.getSecond() + " and " + p.getFirst());
+                logger.info("{" + key +"}:" + "Reading between " + p.getSecond() + " and " + p.getFirst());
                 result.add(readBetween(dataFilePath, p));
             }
         } catch (IOException e) {

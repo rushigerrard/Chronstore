@@ -15,6 +15,8 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ImmutableStoreStressTest {
 
@@ -22,7 +24,7 @@ public class ImmutableStoreStressTest {
 
     private static final int BUFFER_MAX_SIZE = 512;
 
-    private static final int THREAD_ITERATIONS = 5;
+    private static final int THREAD_ITERATIONS = 50;
 
     private static final int THREAD_COUNT = 10;
 
@@ -104,8 +106,11 @@ public class ImmutableStoreStressTest {
         }
     }
 
+    AtomicLong getTime = new AtomicLong();
+    AtomicLong putTime = new AtomicLong();
 
     public void stressTest() {
+
         Runnable testerThread = () -> {
             for (int i = 0; i < THREAD_ITERATIONS; i++) {
                 int index = random.nextInt(MAX_KEYS - 1);
@@ -113,10 +118,13 @@ public class ImmutableStoreStressTest {
                 List<byte[]> valueList = keyValueMap.get(key);
                 index = random.nextInt(MAX_KEYS - 1);
                 KeyMetadata km = new KeyMetadata(new ChordID<>(key));
+                long before = System.currentTimeMillis();
                 if(!imstore.put(km, dataList.get(index))) {
                     System.out.println("Key put failed!");
                     continue;
                 }
+                long after = System.currentTimeMillis();
+                putTime.addAndGet((after - before));
                 valueList.add(dataList.get(index));
             }
         };
@@ -150,15 +158,18 @@ public class ImmutableStoreStressTest {
                 Assert.assertTrue("Key " + e.getKey() + " Not found!",
                         l.contains(km));
                 List<byte[]> allValues = e.getValue();
+                long start = System.currentTimeMillis();
                 List<byte[]> actualValues = imstore.get(km.getKey().getKey(), before, after);
+                long end = System.currentTimeMillis();
+                getTime.addAndGet((end - start));
                 Assert.assertEquals("Number of values returned for a key don't match",
                         allValues.size(), actualValues.size());
-                for (int i = 0; i < allValues.size(); i++) {
-                    if (!Arrays.equals(actualValues.get(i), allValues.get(i)))
-                        System.out.println("Values don't match\n "+
-                        " expected: [" + new String(allValues.get(i)) + "]\n" +
-                        " actual: [" + new String(actualValues.get(i)) + "]\n");
-                }
+//                for (int i = 0; i < allValues.size(); i++) {
+//                    if (!Arrays.equals(actualValues.get(i), allValues.get(i)))
+//                        System.out.println("Values don't match\n "+
+//                        " expected: [" + new String(allValues.get(i)) + "]\n" +
+//                        " actual: [" + new String(actualValues.get(i)) + "]\n");
+//                }
 //                Assert.assertTrue("History doesnt match for key " + e.getKey()
 //                                + " actual size " + actualValues.size() + " expected size " + allValues.size(),
 //                        allValues.containsAll(actualValues));
@@ -184,6 +195,10 @@ public class ImmutableStoreStressTest {
         isst.stressTest();
         long after = System.currentTimeMillis();
         isst.verify(before, after);
+        System.out.println("Average time for put key: " +
+                (isst.putTime.doubleValue() / (THREAD_ITERATIONS * THREAD_COUNT)));
+        System.out.println("Average time for get key: " +
+                (isst.getTime.doubleValue() / (THREAD_ITERATIONS * THREAD_COUNT)));
     }
 
 
