@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ImmutableStoreStressTest {
 
-    private static final int MAX_KEYS = 20;
+    private static final int MAX_KEYS = 50;
 
     private static final int BUFFER_MAX_SIZE = 512;
 
-    private static final int THREAD_ITERATIONS = 50;
+    private static final int THREAD_ITERATIONS = 60;
 
     private static final int THREAD_COUNT = 10;
 
@@ -167,12 +167,12 @@ public class ImmutableStoreStressTest {
                 getTime.addAndGet((end - start));
                 Assert.assertEquals("Number of values returned for a key don't match",
                         allValues.size(), actualValues.size());
-//                for (int i = 0; i < allValues.size(); i++) {
-//                    if (!Arrays.equals(actualValues.get(i), allValues.get(i)))
-//                        System.out.println("Values don't match\n "+
-//                        " expected: [" + new String(allValues.get(i)) + "]\n" +
-//                        " actual: [" + new String(actualValues.get(i)) + "]\n");
-//                }
+                for (int i = 0; i < allValues.size(); i++) {
+                    if (!Arrays.equals(actualValues.get(i), allValues.get(i)))
+                        System.out.println("Values don't match\n "+
+                        " expected: [" + new String(allValues.get(i)) + "]\n" +
+                        " actual: [" + new String(actualValues.get(i)) + "]\n");
+                }
 //                Assert.assertTrue("History doesnt match for key " + e.getKey()
 //                                + " actual size " + actualValues.size() + " expected size " + allValues.size(),
 //                        allValues.containsAll(actualValues));
