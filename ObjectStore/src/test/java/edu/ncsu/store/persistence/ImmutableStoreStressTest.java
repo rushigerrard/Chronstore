@@ -97,7 +97,7 @@ public class ImmutableStoreStressTest {
         while (keyValueMap.size() < MAX_KEYS) {
             String key = UUID.randomUUID().toString().replace("-", "");
             if (!keyValueMap.containsKey(key)) {
-                keyValueMap.put(key, Collections.synchronizedList(new ArrayList<>()));
+                keyValueMap.put(key, Collections.synchronizedList(new ArrayList<byte[]>()));
                 keyList.add(key);
             }
         }
@@ -114,21 +114,24 @@ public class ImmutableStoreStressTest {
 
     public void stressTest() {
 
-        Runnable testerThread = () -> {
-            for (int i = 0; i < THREAD_ITERATIONS; i++) {
-                int index = random.nextInt(MAX_KEYS - 1);
-                String key = keyList.get(index);
-                List<byte[]> valueList = keyValueMap.get(key);
-                index = random.nextInt(MAX_KEYS - 1);
-                KeyMetadata km = new KeyMetadata(new ChordID<>(key));
-                long before = System.currentTimeMillis();
-                if(!imstore.put(km, dataList.get(index))) {
-                    System.out.println("Key put failed!");
-                    continue;
+        Runnable testerThread = new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < THREAD_ITERATIONS; i++) {
+                    int index = random.nextInt(MAX_KEYS - 1);
+                    String key = keyList.get(index);
+                    List<byte[]> valueList = keyValueMap.get(key);
+                    index = random.nextInt(MAX_KEYS - 1);
+                    KeyMetadata km = new KeyMetadata(new ChordID<>(key));
+                    long before = System.currentTimeMillis();
+                    if(!imstore.put(km, dataList.get(index))) {
+                        System.out.println("Key put failed!");
+                        continue;
+                    }
+                    long after = System.currentTimeMillis();
+                    putTime.addAndGet((after - before));
+                    valueList.add(dataList.get(index));
                 }
-                long after = System.currentTimeMillis();
-                putTime.addAndGet((after - before));
-                valueList.add(dataList.get(index));
             }
         };
 
