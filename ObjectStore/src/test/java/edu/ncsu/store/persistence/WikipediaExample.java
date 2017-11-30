@@ -98,10 +98,8 @@ public class WikipediaExample {
 	
 	private static void populateDB(List<String> revisionIdList) throws Exception {
 		Collections.reverse(revisionIdList);
-		
 		for(String revisionId : revisionIdList){
 			String url = "https://en.wikipedia.org/w/api.php?action=query&titles=Berkeley_Levett&format=json&prop=revisions&rvlimit=max&rvprop=ids|size|content|timestamp&rvstartid=" + revisionId + "&rvendid=" + revisionId;
-			
 			try {
 				JsonObject response = readJsonFromUrl(url);
 				extractContentAndTimestamp(response);
@@ -109,9 +107,7 @@ public class WikipediaExample {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
 		}
-		
 	}
 	
 
