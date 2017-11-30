@@ -1,5 +1,7 @@
 package edu.ncsu.store;
 
+import edu.ncsu.chord.ChordID;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -13,6 +15,10 @@ import java.util.Set;
 public interface StoreClientAPI extends Remote {
 
   Object get(String key) throws RemoteException;
+
+  List<Object> get(String key, long fromtimestamp, long totimestamp) throws RemoteException;
+
+  Object get(String key, long timestamp) throws RemoteException;
 
   void put(String key, Object value) throws RemoteException;
 

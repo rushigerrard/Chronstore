@@ -31,6 +31,8 @@ public class StoreClientAPIImpl implements StoreClientAPI {
   }
 
   private static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
+    if (data == null || data.length == 0)
+      return null;
     ByteArrayInputStream in = new ByteArrayInputStream(data);
     ObjectInputStream is = new ObjectInputStream(in);
     return is.readObject();
@@ -52,7 +54,54 @@ public class StoreClientAPIImpl implements StoreClientAPI {
         value = deserialize(val);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e);
+    }
+    return value;
+  }
+
+
+  @Override
+  public List<Object> get(String key, long fromtimestamp, long totimestamp) throws RemoteException {
+    ChordSession session = ObjectStoreService.getChordSession();
+    ChordID<String> chordKey = new ChordID<>(key);
+    ChordID<InetAddress> responsibleNodeID = session.getResponsibleNodeID(chordKey);
+    ObjectStoreOperations responsibleStore = StoreRMIUtils.getRemoteObjectStore(responsibleNodeID.getKey());
+    List<Object> value = null;
+    try {
+      List<byte[]> val = responsibleStore.getObject(chordKey, fromtimestamp, totimestamp);
+      if (val == null) {
+        logger.error("Key " + key + " not found on " + session.getChordNodeID());
+      } else {
+        logger.info("Received " + val.size() + " values for multi-read");
+        value = new ArrayList<>();
+        for (byte[] b : val) {
+          logger.info(new String(b));
+          value.add(deserialize(b));
+        }
+      }
+    } catch (Exception e) {
+      logger.error(e);
+    }
+    return value;
+  }
+
+
+  @Override
+  public Object get(String key, long fromtimestamp) throws RemoteException {
+    ChordSession session = ObjectStoreService.getChordSession();
+    ChordID<String> chordKey = new ChordID<>(key);
+    ChordID<InetAddress> responsibleNodeID = session.getResponsibleNodeID(chordKey);
+    ObjectStoreOperations responsibleStore = StoreRMIUtils.getRemoteObjectStore(responsibleNodeID.getKey());
+    Object value = null;
+    try {
+      byte[] val = responsibleStore.getObject(chordKey, fromtimestamp);
+      if (val == null) {
+        logger.error("Key " + key + " not found on " + session.getChordNodeID());
+      } else {
+        value = deserialize(val);
+      }
+    } catch (Exception e) {
+      logger.error(e);
     }
     return value;
   }
@@ -68,13 +117,17 @@ public class StoreClientAPIImpl implements StoreClientAPI {
     try {
       responsibleStore.putObject(chordKey, serialize(value));
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e);
     }
   }
 
   @Override
   public void delete(String key) throws RemoteException {
-
+    ChordSession session = ObjectStoreService.getChordSession();
+    ChordID<String> chordKey = new ChordID<>(key);
+    ChordID<InetAddress> responsibleNodeID = session.getResponsibleNodeID(chordKey);
+    ObjectStoreOperations responsibleStore = StoreRMIUtils.getRemoteObjectStore(responsibleNodeID.getKey());
+    responsibleStore.delete(chordKey);
   }
 
   @Override

@@ -123,7 +123,25 @@ public class ImmutableStoreTest {
         //System.out.println("received: ["+new String(retVal)+"]");
         Assert.assertEquals("get value doesn't match with put value", data, new String(retVal));
     }
-//
+
+    @Test
+    public void putMultiple2() {
+        String key = "testkey";
+        KeyMetadata km = new KeyMetadata(new ChordID<>(key));
+        store.put(km, "1234".getBytes());
+        store.put(km, "2345".getBytes());
+        store.put(km, "3456".getBytes());
+        store.put(km, "4567".getBytes());
+        List<byte[]> values = store.get(key, (long) 1, System.currentTimeMillis() + 100);
+
+        Assert.assertTrue(new String(values.get(0)).equals("1234"));
+        Assert.assertTrue(new String(values.get(1)).equals("2345"));
+        Assert.assertTrue(new String(values.get(2)).equals("3456"));
+        Assert.assertTrue(new String(values.get(3)).equals("4567"));
+    }
+
+
+    //
 //    @Test
 //    public void get() throws Exception {
 //    }

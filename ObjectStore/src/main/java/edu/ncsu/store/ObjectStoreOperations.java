@@ -21,6 +21,12 @@ public interface ObjectStoreOperations extends Remote {
 
   boolean delete(ChordID<String> key) throws RemoteException;
 
+  /* Specific APIs supported by immutable store */
+  List<byte[]> getObject(ChordID<String> key, long fromtimestamp, long timestamp) throws RemoteException;
+
+  byte[] getObject(ChordID<String> key, long timestamp) throws RemoteException;
+
+
   /* These methods are only to be used when objectStore of one node wants to
   communicate with object store of other node. StoreClientImpl should not call
   these methods. The reason for this distinction is that StoreClientAPIImpl does

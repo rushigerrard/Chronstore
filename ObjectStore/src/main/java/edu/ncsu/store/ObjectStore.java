@@ -73,9 +73,25 @@ class ObjectStore implements ObjectStoreOperations {
   }
 
 
+  /* Specific APIs supported by immutable store */
+  public List<byte[]> getObject(ChordID<String> key, long fromtimestamp, long totimestamp) throws RemoteException {
+    if (!localStorage.containsKey(key.getKey())) {
+      return null;
+    }
+    List<byte[]> result = localStorage.get(key.getKey(), fromtimestamp, totimestamp);
+    for (byte[] b : result)
+      logger.info(new String(b));
+    return result;
+  }
+
+  public byte[] getObject(ChordID<String> key, long timestamp) throws RemoteException {
+    if (!localStorage.containsKey(key.getKey())) {
+      return null;
+    }
+    return localStorage.get(key.getKey(), timestamp);
+  }
 
   /* Method for internal usage of objectStore - Not to be used by StoreClientImpl */
-
   @Override
   public boolean putObjects(Map<KeyMetadata, byte[]> keyValueMap) throws RemoteException {
     boolean result = true;
