@@ -440,7 +440,12 @@ public class ImmutableStore implements LocalStorage {
         // In this pair, pair.first has the ending value and pair.second has
         // the start value.
         // we just need the ending value (pair.first) of that
-        Pair<Integer, Integer> prevOffsetPair = indexTree.get();
+        Pair<Integer, Integer> prevOffsetPair;
+        if (offsetCache.containsKey(key)) {
+            prevOffsetPair = offsetCache.get(key);
+        } else {
+            prevOffsetPair = indexTree.get();
+        }
         int prevOffset;
         if (prevOffsetPair == null) {
             prevOffset = 0;
