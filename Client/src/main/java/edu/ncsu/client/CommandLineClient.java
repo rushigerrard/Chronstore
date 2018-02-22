@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,25 +17,34 @@ public class CommandLineClient {
 
     private final transient static Logger logger = Logger.getLogger(CommandLineClient.class);
     /* All keys-values used for get & put will bef taken & verified from below file */
-    private static String ipListPath = "/tmp/ip";
+    //private static String ipListPath = System.getProperty("java.io.tmpdir") + "/ip";
+    private static String ipListPath = "C:\\Users\\rushikesh\\Documents\\GitHub\\chronstore\\Resources\\ip_address";
     ArrayList<ChordID<InetAddress>> ipList;
     StoreClientAPI handle;
 
     public CommandLineClient() {
         ipList = new ArrayList<>();
-        try {
+        /*try {
             FileReader fr = new FileReader(ipListPath);
             BufferedReader br = new BufferedReader(fr);
             String line;
             while ((line = br.readLine()) != null) {
-                ipList.add(new ChordID<>(InetAddress.getByName(line)));
+         
+            	ipList.add(new ChordID<>(InetAddress.getByName(line)));
             }
             Collections.sort(ipList);
             logger.debug("Active nodes: " + ipList);
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
         // Set the very first entry in this list as bootstrap IP
+        try {
+			ipList.add(new ChordID<>(InetAddress.getByName("152.46.16.124")));
+			ipList.add(new ChordID<>(InetAddress.getByName("152.46.17.16")));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         ClientConfig.bootStrapIP = ipList.get(0).getKey().toString().substring(1);
         System.out.println("Connecting to " + ClientConfig.bootStrapIP);
         handle = ClientRMIUtils.getRemoteClient();

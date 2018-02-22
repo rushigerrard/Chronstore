@@ -25,6 +25,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 
+import edu.ncsu.chord.ChordID;
+import edu.ncsu.store.KeyMetadata;
+
 public class WikipediaExample {
 
 	private static String readAll(Reader rd) throws IOException {
@@ -92,7 +95,8 @@ public class WikipediaExample {
 			String formattedDate = timestamp.toString().substring(1, timestamp.toString().length() - 1);
 			long insertionTimestamp = getTimeStamp(formattedDate);
 			
-			store.put("Berkeley_Levett", content.toString().getBytes(), insertionTimestamp);
+			store.put(new KeyMetadata(new ChordID<String>("Berkeley_Levett")), content.toString().getBytes(), insertionTimestamp);
+			//store.put("Berkeley_Levett", content.toString().getBytes(), insertionTimestamp);
 		}
 	}
 	
@@ -112,12 +116,14 @@ public class WikipediaExample {
 	
 
 	public static void main(String[] args) throws Exception{
-		List<String> revisionIdList = new LinkedList<>();
+		/*List<String> revisionIdList = new LinkedList<>();
 		JsonObject response;
 			response = readJsonFromUrl("https://en.wikipedia.org/w/api.php?action=query&titles=Berkeley_Levett&format=json&prop=revisions&rvlimit=max&rvprop=ids|size|timestamp");
 			revisionIdList = getArticleRevisions(response);
 			populateDB(revisionIdList);
-		
+		*/
+		ImmutableStore store = new ImmutableStore();
+		System.out.println(new String(store.get("Berkeley_Levett")));
 		
 	}
 

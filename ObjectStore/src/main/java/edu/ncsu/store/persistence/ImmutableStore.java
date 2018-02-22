@@ -319,24 +319,24 @@ public class ImmutableStore implements LocalStorage {
      * @param value     value out the key
      * @return
      */
-//    boolean put(KeyMetadata km, byte[] value, long timestamp) {
-//        // First persist the data and indexes
-//        boolean success = false;
-//        if (km == null || value == null)
-//            throw new NullPointerException("Key or value can not be null!");
-//
-//        if (put(km.getKey().getKey(), value, timestamp)) {
-//            // Write to data file is complete now add this into metadata list
-//            HashSet<KeyMetadata> mSet = readMetadata();
-//            if (!mSet.contains(km)) {
-//                mSet.add(km);
-//                // write back
-//                write(serialize(mSet), metadataFilePath, false);
-//            }
-//            success = true;
-//        }
-//        return success;
-//    }
+    boolean put(KeyMetadata km, byte[] value, long timestamp) {
+        // First persist the data and indexes
+        boolean success = false;
+        if (km == null || value == null)
+            throw new NullPointerException("Key or value can not be null!");
+
+        if (put(km.getKey().getKey(), value, timestamp)) {
+            // Write to data file is complete now add this into metadata list
+            HashSet<KeyMetadata> mSet = readMetadata();
+            if (!mSet.contains(km)) {
+                mSet.add(km);
+                // write back
+                write(serialize(mSet), metadataFilePath, false);
+            }
+            success = true;
+        }
+        return success;
+   }
     @Override
     public boolean put(KeyMetadata km, byte[] value) {
         // First persist the data and indexes
@@ -390,7 +390,7 @@ public class ImmutableStore implements LocalStorage {
     an Integer value for the value. The Long value is going to be a timestamp of
     when the current value was added into the system and Integer value is going to
     be the offset of the actual storage location of  that value. */
-    boolean put(String key, byte[] value, long timestamp) {
+    private boolean put(String key, byte[] value, long timestamp) {
         long before, after;
         BPlusTree<Long, Integer> indexTree;
         File dataFile = dataFilefor(key);
